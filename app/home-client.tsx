@@ -62,7 +62,7 @@ export default function HomeClient({ data, query, variables, fixtures, latestNew
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className="relative h-[62vh] min-h-[400px] max-h-[660px] overflow-hidden">
         {page.hero_image ? (
-          <Image
+          <Image unoptimized
             src={page.hero_image}
             alt={page.title ?? "Knocklyon BC"}
             fill
@@ -271,7 +271,7 @@ export default function HomeClient({ data, query, variables, fixtures, latestNew
                 >
                   <div className="relative aspect-[16/9] overflow-hidden bg-stone-100">
                     {article.cover_image ? (
-                      <Image
+                      <Image unoptimized
                         src={article.cover_image}
                         alt={article.title}
                         fill

@@ -25,7 +25,7 @@ export default function ArticleClient({ data, query, variables }: Props) {
       <section className="relative overflow-hidden bg-forest">
         {article.cover_image && (
           <>
-            <Image
+            <Image unoptimized
               src={article.cover_image}
               alt={article.title}
               fill
@@ -60,7 +60,7 @@ export default function ArticleClient({ data, query, variables }: Props) {
       {article.cover_image && (
         <div className="mx-auto max-w-3xl px-6">
           <div className="relative -mt-8 aspect-[16/9] overflow-hidden rounded-2xl shadow-xl">
-            <Image
+            <Image unoptimized
               src={article.cover_image}
               alt={article.title}
               fill

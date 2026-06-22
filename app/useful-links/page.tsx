@@ -45,7 +45,7 @@ export default function UsefulLinksPage() {
             {/* Section header */}
             <div className="flex items-center gap-5 mb-6">
               <a href={section.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                <Image
+                <Image unoptimized
                   src={section.logo}
                   alt={section.title}
                   width={160}

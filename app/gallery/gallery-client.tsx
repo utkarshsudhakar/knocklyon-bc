@@ -86,7 +86,7 @@ export default function GalleryClient({ data, query, variables }: Props) {
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-forest
                       ${wide ? "col-span-2" : "col-span-1"}`}
                   >
-                    <Image
+                    <Image unoptimized
                       src={img.image}
                       alt={img.caption ?? ""}
                       fill
@@ -159,7 +159,7 @@ export default function GalleryClient({ data, query, variables }: Props) {
             className="relative max-h-[80vh] max-w-5xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
+            <Image unoptimized
               src={active.image}
               alt={active.caption ?? ""}
               width={1600}

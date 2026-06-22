@@ -69,7 +69,7 @@ function Img({ src, alt }: { src?: string | null; alt: string }) {
   }
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-lg">
-      <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" />
+      <Image unoptimized src={src} alt={alt} fill className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" />
     </div>
   );
 }

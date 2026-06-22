@@ -63,7 +63,7 @@ export default function NewsClient({ data, query, variables }: Props) {
                 {/* Cover image */}
                 <div className="relative aspect-[16/9] overflow-hidden bg-stone-100">
                   {article.cover_image ? (
-                    <Image
+                    <Image unoptimized
                       src={article.cover_image}
                       alt={article.title}
                       fill
