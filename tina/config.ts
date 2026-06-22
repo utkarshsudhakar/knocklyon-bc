@@ -255,19 +255,15 @@ export default defineConfig({
         path: "content/fixtures",
         format: "json",
         ui: {
-          // New fixtures land in the current-season subfolder automatically.
-          // Admin can override the filename prefix (e.g. 2026-27/my-fixture).
-          defaultItem: async () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(({ defaultItem: async () => {
             try {
               const res = await fetch("/api/current-season");
               const { season } = await res.json();
-              // Convert "2026/27" → "2026-27" for use as folder name
               const folder = season ? season.replace("/", "-") : "";
               return folder ? { _relativePath: `${folder}/` } : {};
-            } catch {
-              return {};
-            }
-          },
+            } catch { return {}; }
+          } }) as any),
         },
         fields: [
           {

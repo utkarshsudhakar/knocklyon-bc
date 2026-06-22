@@ -27,7 +27,7 @@ export default async function Home() {
           .filter(Boolean) ?? []
       }
       latestNews={latestNews}
-      stats={settingsRes.data.site_settings?.stats ?? []}
+      stats={(settingsRes.data.site_settings?.stats ?? []).filter(Boolean) as { value: string; label: string }[]}
     />
   );
 }

@@ -19,12 +19,12 @@ type Props = {
 // ─── League table viewer ─────────────────────────────────────────────────────
 
 function LeagueTablesSection({ tables }: { tables: TeamEntry[] }) {
-  const [active, setActive] = useState<LeagueTable | null>(null);
+  const [active, setActive] = useState<TeamEntry | null>(null);
   const [rows, setRows] = useState<string[][] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function open(t: LeagueTable) {
+  async function open(t: TeamEntry) {
     if (active?.name === t.name) { setActive(null); setRows(null); return; }
     setActive(t);
     setRows(null);
