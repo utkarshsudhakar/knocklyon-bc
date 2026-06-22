@@ -140,14 +140,29 @@ export default function HomeClient({ data, query, variables, fixtures, latestNew
               </div>
             )}
 
-            {/* Stats — right side */}
+            {/* Stats — right side, each card flips on hover */}
             <dl className="grid grid-cols-2 divide-x divide-stone-200 sm:grid-cols-4">
               {stats.map((s) => (
-                <div key={s.label} className="px-5 py-5 text-center">
-                  <dd className="text-2xl font-extrabold text-forest sm:text-3xl">{s.value}</dd>
-                  <dt className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-stone-500">
-                    {s.label}
-                  </dt>
+                <div
+                  key={s.label}
+                  className="group relative cursor-default overflow-hidden [perspective:800px]"
+                >
+                  {/* Flip container — must fill the full grid cell */}
+                  <div className="relative h-full transition-transform duration-500 ease-in-out [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+
+                    {/* Front face */}
+                    <div className="flex h-full flex-col items-center justify-center px-5 py-5 text-center [backface-visibility:hidden]">
+                      <dd className="text-2xl font-extrabold text-forest sm:text-3xl">{s.value}</dd>
+                      <dt className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-stone-500">{s.label}</dt>
+                    </div>
+
+                    {/* Back face — covers the full cell, no gap */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-forest px-5 py-5 text-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                      <dd className="text-2xl font-extrabold text-white sm:text-3xl">{s.value}</dd>
+                      <dt className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-white/80">{s.label}</dt>
+                    </div>
+
+                  </div>
                 </div>
               ))}
             </dl>
