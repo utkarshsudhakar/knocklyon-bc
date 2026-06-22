@@ -58,41 +58,66 @@ export default function HomeClient({ data, query, variables, fixtures, latestNew
 
   return (
     <>
-      {/* ── Hero ─────────────────────────────────────────── */}
-      <section className="relative h-[62vh] min-h-[400px] max-h-[660px] overflow-hidden">
-        {page.hero_image ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={page.hero_image} alt={page.title ?? "Knocklyon BC"} className="absolute inset-0 h-full w-full object-cover object-center" />
-        ) : (
-          <div className="absolute inset-0 bg-forest" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
-        <div className="absolute inset-0 flex flex-col justify-end">
-          <div className="mx-auto w-full max-w-6xl px-6 pb-10">
-            <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
-              {page.title}
-            </h1>
-            {page.hero_subtitle && (
-              <p className="mt-2 max-w-xl text-base text-white/85 sm:text-lg">
-                {page.hero_subtitle}
-              </p>
-            )}
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link
-                href="/about"
-                className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-dark"
-              >
-                Know More →
-              </Link>
-              <Link
-                href="/contact"
-                className="rounded-full border border-white/50 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
-              >
-                Join the Club
-              </Link>
-            </div>
+      {/* ── Hero — full-bleed video background ──────────── */}
+      <section className="relative h-[75vh] min-h-[500px] max-h-[800px] overflow-hidden">
+
+        {/* Video background — autoplay, muted, looping */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          poster={page.hero_image ?? undefined}
+        >
+          <source src="/hero-video.mp4" type="video/mp4" />
+          {/* Fallback to image if video not supported */}
+          {page.hero_image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={page.hero_image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          )}
+        </video>
+
+        {/* Gradient overlay — heavier at bottom so text is legible */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/15" />
+
+        {/* Text content — centred, dramatic sizing */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-green-300">
+            Welcome to
+          </p>
+          <h1 className="mt-3 max-w-4xl text-5xl font-extrabold leading-tight tracking-tight text-white drop-shadow-lg sm:text-6xl md:text-7xl">
+            {page.title}
+          </h1>
+          {page.hero_subtitle && (
+            <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+              {page.hero_subtitle}
+            </p>
+          )}
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/about"
+              className="rounded-full bg-forest px-7 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-forest-dark"
+            >
+              Know More →
+            </Link>
+            <Link
+              href="/contact"
+              className="rounded-full border border-white/50 bg-white/10 px-7 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+            >
+              Join the Club
+            </Link>
           </div>
         </div>
+
+        {/* Subtle scroll hint */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-white/50">
+          <span className="text-[10px] font-semibold uppercase tracking-widest">Scroll</span>
+          <svg className="h-4 w-4 animate-bounce" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <path d="M8 3v10M4 9l4 4 4-4"/>
+          </svg>
+        </div>
+
       </section>
 
       {/* ── Next Match + Stats (combined) ────────────────── */}
