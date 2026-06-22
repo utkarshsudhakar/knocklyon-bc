@@ -2,7 +2,6 @@
 
 import { useTina } from "tinacms/dist/react";
 import { TinaMarkdown } from "tinacms/dist/rich-text";
-import Image from "next/image";
 import Link from "next/link";
 
 type Props = { data: any; query: string; variables: object };
@@ -25,13 +24,9 @@ export default function ArticleClient({ data, query, variables }: Props) {
       <section className="relative overflow-hidden bg-forest">
         {article.cover_image && (
           <>
-            <Image unoptimized
-              src={article.cover_image}
-              alt={article.title}
-              fill
-              className="object-cover object-center opacity-30"
-              priority
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={article.cover_image} alt={article.title}
+              className="absolute inset-0 h-full w-full object-cover object-center opacity-30" />
             <div className="absolute inset-0 bg-gradient-to-t from-forest via-forest/80 to-forest/40" />
           </>
         )}
@@ -60,13 +55,9 @@ export default function ArticleClient({ data, query, variables }: Props) {
       {article.cover_image && (
         <div className="mx-auto max-w-3xl px-6">
           <div className="relative -mt-8 aspect-[16/9] overflow-hidden rounded-2xl shadow-xl">
-            <Image unoptimized
-              src={article.cover_image}
-              alt={article.title}
-              fill
-              className="object-cover"
-              sizes="(min-width: 768px) 768px, 100vw"
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={article.cover_image} alt={article.title}
+              className="absolute inset-0 h-full w-full object-cover" />
           </div>
         </div>
       )}

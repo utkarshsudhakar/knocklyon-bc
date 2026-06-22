@@ -2,8 +2,8 @@
 
 import { useTina } from "tinacms/dist/react";
 import { TinaMarkdown } from "tinacms/dist/rich-text";
-import Image from "next/image";
 import Link from "next/link";
+// eslint-disable-next-line @next/next/no-img-element
 import PageHero from "../components/page-hero";
 
 type Team = { name: string; league?: string | null; table_link?: string | null };
@@ -69,7 +69,8 @@ function Img({ src, alt }: { src?: string | null; alt: string }) {
   }
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-lg">
-      <Image unoptimized src={src} alt={alt} fill className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} className="absolute inset-0 h-full w-full object-cover" />
     </div>
   );
 }

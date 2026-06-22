@@ -1,7 +1,6 @@
 "use client";
 
 import { useTina } from "tinacms/dist/react";
-import Image from "next/image";
 import Link from "next/link";
 import PageHero from "../components/page-hero";
 
@@ -63,13 +62,9 @@ export default function NewsClient({ data, query, variables }: Props) {
                 {/* Cover image */}
                 <div className="relative aspect-[16/9] overflow-hidden bg-stone-100">
                   {article.cover_image ? (
-                    <Image unoptimized
-                      src={article.cover_image}
-                      alt={article.title}
-                      fill
-                      className="object-cover transition duration-300 group-hover:scale-105"
-                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                    />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={article.cover_image} alt={article.title}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-green-50">
                       <svg className="h-10 w-10 text-forest/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

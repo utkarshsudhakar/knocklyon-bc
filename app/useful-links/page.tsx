@@ -1,4 +1,3 @@
-import Image from "next/image";
 import PageHero from "../components/page-hero";
 
 const sections = [
@@ -45,13 +44,8 @@ export default function UsefulLinksPage() {
             {/* Section header */}
             <div className="flex items-center gap-5 mb-6">
               <a href={section.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                <Image unoptimized
-                  src={section.logo}
-                  alt={section.title}
-                  width={160}
-                  height={48}
-                  className="h-12 w-auto object-contain"
-                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={section.logo} alt={section.title} className="h-12 w-auto object-contain" />
               </a>
               <p className="text-sm text-stone-500">{section.description}</p>
             </div>

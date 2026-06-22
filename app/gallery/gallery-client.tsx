@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useTina } from "tinacms/dist/react";
-import Image from "next/image";
 import PageHero from "../components/page-hero";
 
 type Props = { data: any; query: string; variables: object };
@@ -86,14 +85,10 @@ export default function GalleryClient({ data, query, variables }: Props) {
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-forest
                       ${wide ? "col-span-2" : "col-span-1"}`}
                   >
-                    <Image unoptimized
-                      src={img.image}
-                      alt={img.caption ?? ""}
-                      fill
-                      className="object-cover transition duration-500 group-hover:scale-105 group-hover:brightness-90"
-                      sizes={wide ? "(min-width: 768px) 66vw, 100vw" : "(min-width: 768px) 33vw, 50vw"}
-                      onError={() => markBroken(img.id)}
-                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.image} alt={img.caption ?? ""}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105 group-hover:brightness-90"
+                      onError={() => markBroken(img.id)} />
 
                     {/* Hover overlay */}
                     <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/20 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -159,13 +154,9 @@ export default function GalleryClient({ data, query, variables }: Props) {
             className="relative max-h-[80vh] max-w-5xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image unoptimized
-              src={active.image}
-              alt={active.caption ?? ""}
-              width={1600}
-              height={1200}
-              className="mx-auto max-h-[80vh] w-auto rounded-xl object-contain shadow-2xl"
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={active.image} alt={active.caption ?? ""}
+              className="mx-auto max-h-[80vh] w-auto rounded-xl object-contain shadow-2xl" />
           </div>
 
           {/* Caption + dots indicator */}
