@@ -1,0 +1,27 @@
+{
+  "name": "2026/27",
+  "folder": "2026-27",
+  "archived": false,
+  "teams": [
+    {
+      "name": "Men's 1",
+      "league": "Division 4",
+      "table_link": ""
+    },
+    {
+      "name": "Men's 2",
+      "league": "Division 5",
+      "table_link": ""
+    },
+    {
+      "name": "Ladies' 1",
+      "league": "Division 6",
+      "table_link": ""
+    },
+    {
+      "name": "Mixed 1",
+      "league": "Division 6",
+      "table_link": ""
+    }
+  ]
+}

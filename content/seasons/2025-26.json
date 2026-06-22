@@ -1,0 +1,27 @@
+{
+  "name": "2025/26",
+  "folder": "2025-26",
+  "archived": false,
+  "teams": [
+    {
+      "name": "Men's 1",
+      "league": "Division 4",
+      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+    },
+    {
+      "name": "Men's 2",
+      "league": "Division 5",
+      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+    },
+    {
+      "name": "Ladies' 1",
+      "league": "Division 6",
+      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+    },
+    {
+      "name": "Mixed 1",
+      "league": "Division 6",
+      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+    }
+  ]
+}

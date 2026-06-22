@@ -1,0 +1,30 @@
+{
+  "club_name": "Knocklyon Badminton Club",
+  "current_season": "2026/27",
+  "announcement": "Pre-season starts from 14 August. We are looking for Division 4 men, if interested please contact us!",
+  "logo": "/KBC_Facebook_Profile_1024.png",
+  "tagline": "Community badminton in South Dublin",
+  "club_email": "info@knocklyonbc.ie",
+  "phone": "",
+  "address": "Knocklyon Badminton Club,\nIdrone Ave, Knocklyon, Dublin,\nD16XT18",
+  "facebook_url": "https://www.facebook.com/KnocklyonBadmintonClub",
+  "instagram_url": "https://www.instagram.com/knocklyonbadminton/",
+  "stats": [
+    {
+      "value": "9",
+      "label": "Teams"
+    },
+    {
+      "value": "40+",
+      "label": "Members"
+    },
+    {
+      "value": "3 / wk",
+      "label": "Training nights"
+    },
+    {
+      "value": "Dublin 16",
+      "label": "Based in"
+    }
+  ]
+}
