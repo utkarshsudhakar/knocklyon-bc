@@ -3,6 +3,7 @@ import Link from "next/link";
 type Props = {
   settings?: {
     club_name?: string | null;
+    logo?: string | null;
     club_email?: string | null;
     phone?: string | null;
     address?: string | null;
