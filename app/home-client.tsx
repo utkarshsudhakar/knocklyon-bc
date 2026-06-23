@@ -61,21 +61,30 @@ export default function HomeClient({ data, query, variables, fixtures, latestNew
       {/* ── Hero — full-bleed video background ──────────── */}
       <section className="relative h-[75vh] min-h-[500px] max-h-[800px] overflow-hidden">
 
-        {/* Video background — autoplay, muted, looping */}
+        {/* Mobile: hero image (video won't autoplay on mobile browsers) */}
+        {page.hero_image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={page.hero_image}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-center md:hidden"
+          />
+        )}
+        {!page.hero_image && (
+          <div className="absolute inset-0 bg-forest md:hidden" />
+        )}
+
+        {/* Desktop: video background */}
         <video
           autoPlay
           muted
           loop
           playsInline
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          preload="metadata"
+          className="absolute inset-0 hidden h-full w-full object-cover object-center md:block"
           poster={page.hero_image ?? undefined}
         >
           <source src="/hero-video.mp4" type="video/mp4" />
-          {/* Fallback to image if video not supported */}
-          {page.hero_image && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={page.hero_image} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          )}
         </video>
 
         {/* Gradient overlay — heavier at bottom so text is legible */}
