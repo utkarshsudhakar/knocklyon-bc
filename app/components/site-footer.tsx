@@ -144,7 +144,7 @@ export default function SiteFooter({ settings }: Props) {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/fiortech-logo.png"
+                  src="/fiortech-logo-dark.png"
                   alt="Fíortech"
                   className="h-9 w-auto object-contain opacity-80 transition hover:opacity-100"
                 />
