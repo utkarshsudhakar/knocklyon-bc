@@ -17,6 +17,7 @@ html {
 html, body {
   background: #fafaf7;
   color: #1c1917;
+  cursor: url('/shuttle-cursor.svg') 3 3, auto;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
