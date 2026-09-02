@@ -25,6 +25,8 @@ const sections = [
       { label: "Dublin District Leagues & Cups",      url: "https://leinsterbadminton.com/competition/leagues/ddlc/" },
       { label: "Baldoyle Court Booking",              url: "https://baldoylebadminton.mycourts.co.uk/" },
       { label: "Terenure Court Booking",              url: "https://terenurebadminton.mycourts.co.uk/" },
+      { label: "Player Search",                       url: "https://bi.tournamentsoftware.com/find/player" },
+      { label: "Tournament Software",                 url: "https://bi.tournamentsoftware.com" },
     ],
   },
 ];
