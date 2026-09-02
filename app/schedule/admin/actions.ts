@@ -586,6 +586,44 @@ export async function sendInvite(formData: FormData) {
   );
 }
 
+// ── Season reset ───────────────────────────────────────────────────────────
+
+/**
+ * Wipes all seasonal data so admin can start the next season fresh:
+ *   - deletes every opposing club (cascades to fixtures)
+ *   - deletes every home slot (cascades to team_home_availability)
+ *   - resets invite_sent_at on knocklyon_teams
+ * Preserves the teams themselves + captain contact + tokens so returning
+ * captains keep their links. Requires typing "RESET" to confirm.
+ */
+export async function resetSeason(formData: FormData) {
+  await requireAdmin();
+  const confirm = ((formData.get("confirm") as string) ?? "").trim();
+  if (confirm !== "RESET") {
+    redirect("/schedule/admin?msg=reset_bad_confirm");
+  }
+
+  const supabase = getSupabase();
+
+  // Order matters: fixtures reference both clubs and home_slots. Deleting the
+  // clubs cascades their fixtures; deleting home_slots cascades the junction
+  // rows (and any orphaned fixtures.confirmed_slot_id nulls out via SET NULL —
+  // but by then the fixtures are already gone via the clubs cascade).
+  await supabase.from("clubs").delete().neq("id", ZERO_UUID);
+  await supabase.from("home_slots").delete().neq("id", ZERO_UUID);
+  await supabase
+    .from("knocklyon_teams")
+    .update({ invite_sent_at: null })
+    .neq("id", ZERO_UUID);
+
+  revalidatePath("/schedule/admin");
+  redirect("/schedule/admin?msg=reset_done");
+}
+
+// Supabase requires a filter on delete/update. A UUID that will never appear
+// naturally is a safe way to say "match every row".
+const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
+
 // ── Captain invite email ───────────────────────────────────────────────────
 
 export async function sendCaptainInvite(formData: FormData) {

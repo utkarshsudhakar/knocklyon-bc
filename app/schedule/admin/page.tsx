@@ -24,6 +24,7 @@ import {
   updateKnocklyonTeamCaptain,
 } from "./actions";
 import DownloadJson from "./copy-json";
+import ResetSeasonForm from "./reset-season";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Scheduling admin — Knocklyon BC" };
@@ -340,6 +341,10 @@ export default async function AdminPage({
       ) : (
         <TeamPanel team={selectedTeam} seasonFolder={seasonFolder} />
       )}
+
+      <div className="pt-8 mt-8 border-t border-zinc-200">
+        <ResetSeasonForm />
+      </div>
     </main>
   );
 }
@@ -1114,6 +1119,28 @@ function MessageBanner({
       >
         Email not configured — captain link for {teamLabel} logged to server
         console.
+      </div>
+    );
+  }
+  if (code === "reset_done") {
+    return (
+      <div
+        role="status"
+        className="rounded border border-forest bg-forest/10 text-forest px-4 py-3 text-sm"
+      >
+        Season reset. Opposing clubs, home dates, and fixtures cleared.
+        Knocklyon teams and captain contacts preserved. Ready for next season.
+      </div>
+    );
+  }
+  if (code === "reset_bad_confirm") {
+    return (
+      <div
+        role="alert"
+        className="rounded border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm"
+      >
+        Reset cancelled &mdash; you must type <code>RESET</code> exactly to
+        confirm.
       </div>
     );
   }
