@@ -128,7 +128,7 @@ export default function SiteFooter({ settings }: Props) {
         </div>
 
         {/* Sponsors + Affiliations */}
-        <div className="mt-8 border-t border-stone-700 pt-6">
+        <div className="mt-8 border-t border-white/10 pt-6">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
 
             {/* Sponsors */}
