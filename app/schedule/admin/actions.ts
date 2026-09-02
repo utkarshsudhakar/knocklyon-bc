@@ -9,7 +9,11 @@ import {
   dateHasKnocklyonTeamMatch,
   maybeSendConfirmationEmail,
 } from "../_lib/notify";
-import { inviteEmailHtml } from "../_lib/email-templates";
+import {
+  inviteEmailHtml,
+  captainInviteEmailHtml,
+} from "../_lib/email-templates";
+import { capacityForDate } from "../_lib/config";
 
 const COOKIE_NAME = "kbc_admin";
 const COOKIE_MAX_AGE_SECS = 60 * 60 * 24 * 7;
@@ -88,17 +92,67 @@ export async function addKnocklyonTeam(
     ((formData.get("division") as string) ?? "").trim() || null;
   const displayName =
     ((formData.get("display_name") as string) ?? "").trim() || null;
+  const captainName =
+    ((formData.get("captain_name") as string) ?? "").trim() || null;
+  const captainEmail =
+    ((formData.get("captain_email") as string) ?? "").trim() || null;
 
   if (!name) return { error: "Team name is required (e.g. M1)." };
+  if (
+    captainEmail &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(captainEmail)
+  ) {
+    return { error: "Please enter a valid captain email address." };
+  }
 
-  const { error } = await getSupabase()
-    .from("knocklyon_teams")
-    .insert({ name, division, display_name: displayName });
+  const accessToken = randomBytes(24).toString("base64url");
+
+  const { error } = await getSupabase().from("knocklyon_teams").insert({
+    name,
+    division,
+    display_name: displayName,
+    captain_name: captainName,
+    captain_email: captainEmail,
+    access_token: accessToken,
+  });
 
   if (error) return { error: error.message };
 
   revalidatePath("/schedule/admin");
   return { ok: true };
+}
+
+export async function updateKnocklyonTeamCaptain(formData: FormData) {
+  await requireAdmin();
+  const teamId = (formData.get("team_id") as string) ?? "";
+  const captainName =
+    ((formData.get("captain_name") as string) ?? "").trim() || null;
+  const captainEmail =
+    ((formData.get("captain_email") as string) ?? "").trim() || null;
+  if (!teamId) return;
+
+  const supabase = getSupabase();
+
+  // Ensure the team has a token to hand out.
+  const { data: team } = await supabase
+    .from("knocklyon_teams")
+    .select("access_token")
+    .eq("id", teamId)
+    .single();
+  const patch: {
+    captain_name: string | null;
+    captain_email: string | null;
+    access_token?: string;
+  } = {
+    captain_name: captainName,
+    captain_email: captainEmail,
+  };
+  if (!team?.access_token) {
+    patch.access_token = randomBytes(24).toString("base64url");
+  }
+
+  await supabase.from("knocklyon_teams").update(patch).eq("id", teamId);
+  revalidatePath("/schedule/admin");
 }
 
 export async function setMatchTime(formData: FormData) {
@@ -213,15 +267,19 @@ export async function addTeamSlot(
 
   const teamId = ((formData.get("knocklyon_team_id") as string) ?? "").trim();
   const slotDate = ((formData.get("slot_date") as string) ?? "").trim();
-  const capacityRaw = ((formData.get("capacity") as string) ?? "").trim();
-  const capacity = parseInt(capacityRaw, 10);
   const matchTime =
     ((formData.get("match_time") as string) ?? "").trim() || "20:00";
 
   if (!teamId) return { error: "Missing Knocklyon team." };
   if (!slotDate) return { error: "Date is required." };
-  if (!Number.isFinite(capacity) || capacity < 1) {
-    return { error: "Capacity must be at least 1." };
+
+  // Capacity comes from the venue's weekly policy — Mon 3, Tue/Thu 1, else 0.
+  const capacity = capacityForDate(slotDate);
+  if (capacity < 1) {
+    return {
+      error:
+        "Knocklyon can't host on that day of the week. Try a Monday (or Tue/Thu).",
+    };
   }
 
   const supabase = getSupabase();
@@ -513,10 +571,120 @@ export async function sendInvite(formData: FormData) {
     console.error("[Schedule invite] Resend threw:", err);
   }
 
+  if (sent) {
+    await getSupabase()
+      .from("clubs")
+      .update({ invite_sent_at: new Date().toISOString() })
+      .eq("id", clubId);
+  }
+
   const clubParam = encodeURIComponent(club.name);
   redirect(
     sent
       ? `/schedule/admin?msg=invite_sent&club=${clubParam}`
       : `/schedule/admin?msg=invite_failed&club=${clubParam}`
+  );
+}
+
+// ── Captain invite email ───────────────────────────────────────────────────
+
+export async function sendCaptainInvite(formData: FormData) {
+  await requireAdmin();
+  const teamId = (formData.get("id") as string) ?? "";
+  if (!teamId) return;
+
+  const supabase = getSupabase();
+  const { data: team } = await supabase
+    .from("knocklyon_teams")
+    .select("id, name, division, captain_name, captain_email, access_token")
+    .eq("id", teamId)
+    .single();
+
+  if (!team) {
+    redirect("/schedule/admin?msg=captain_invite_failed&reason=no_team");
+  }
+  if (!team.captain_email) {
+    redirect(
+      `/schedule/admin?msg=captain_invite_failed&team_name=${encodeURIComponent(
+        team.name
+      )}&reason=no_email`
+    );
+  }
+
+  // Ensure the team has a token to hand out.
+  let token = team.access_token;
+  if (!token) {
+    token = randomBytes(24).toString("base64url");
+    await supabase
+      .from("knocklyon_teams")
+      .update({ access_token: token })
+      .eq("id", teamId);
+  }
+
+  const siteUrl = await currentSiteUrl();
+  const link = `${siteUrl}/schedule/k/${token}`;
+  const teamLabel = `Knocklyon ${team.name}${
+    team.division ? ` (${team.division})` : ""
+  }`;
+
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.CONTACT_FROM ?? "onboarding@resend.dev";
+
+  if (!apiKey) {
+    console.log(
+      "[Captain invite: RESEND_API_KEY not set, would have emailed]",
+      { to: team.captain_email, link, teamLabel }
+    );
+    redirect(
+      `/schedule/admin?msg=captain_invite_logged&team_name=${encodeURIComponent(
+        team.name
+      )}`
+    );
+  }
+
+  let sent = false;
+  try {
+    const { Resend } = await import("resend");
+    const resend = new Resend(apiKey);
+
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: team.captain_email,
+      bcc: ["info@knocklyonbc.ie"],
+      subject: `Share ${teamLabel}'s home dates for the season`,
+      html: captainInviteEmailHtml({
+        captainName: team.captain_name,
+        teamLabel,
+        link,
+      }),
+    });
+
+    if (result.error) {
+      console.error("[Captain invite] Resend API error:", result.error);
+    } else {
+      console.log(
+        "[Captain invite] Sent to",
+        team.captain_email,
+        "id:",
+        result.data?.id
+      );
+      sent = true;
+    }
+  } catch (err) {
+    console.error("[Captain invite] Resend threw:", err);
+  }
+
+  if (sent) {
+    await supabase
+      .from("knocklyon_teams")
+      .update({ invite_sent_at: new Date().toISOString() })
+      .eq("id", teamId);
+  }
+
+  const teamParam = encodeURIComponent(team.name);
+  redirect(
+    sent
+      ? `/schedule/admin?msg=captain_invite_sent&team_name=${teamParam}`
+      : `/schedule/admin?msg=captain_invite_failed&team_name=${teamParam}`
   );
 }

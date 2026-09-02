@@ -64,13 +64,24 @@ function button(label: string, href: string): string {
   `;
 }
 
+type Audience = "secretary" | "captain";
+
+function footerLine(audience: Audience): string {
+  if (audience === "captain") {
+    return `You&rsquo;re receiving this because you&rsquo;re marked as your team&rsquo;s captain in our records.<br>If that&rsquo;s not you, please let us know by replying to this email.`;
+  }
+  return `You&rsquo;re receiving this because you&rsquo;re marked as your club&rsquo;s match secretary in our records.<br>If that&rsquo;s not you, please let us know by replying to this email.`;
+}
+
 /** Outer shell. bodyInner is trusted HTML. */
 function shell({
   preheader,
   bodyInner,
+  audience = "secretary",
 }: {
   preheader: string;
   bodyInner: string;
+  audience?: Audience;
 }): string {
   const logoUrl = process.env.EMAIL_LOGO_URL ?? "";
   return `<!doctype html>
@@ -108,7 +119,7 @@ ${escapeHtml(preheader)}
               <tr>
                 <td align="center">
                   ${logoUrl
-                    ? `<img src="${logoUrl}" width="64" height="64" alt="Knocklyon Badminton Club" style="display:block;border:0;outline:none;text-decoration:none;height:64px;width:64px;margin:0 auto 10px auto">`
+                    ? `<img src="${logoUrl}" width="64" height="80" alt="Knocklyon Badminton Club" style="display:block;border:0;outline:none;text-decoration:none;height:80px;width:64px;margin:0 auto 10px auto">`
                     : ""}
                   <div style="font-family:${FONT_STACK};font-size:12px;letter-spacing:1.6px;color:${WHITE};font-weight:700;text-transform:uppercase;line-height:1">
                     Knocklyon Badminton Club
@@ -140,8 +151,7 @@ ${bodyInner}
       </table>
 
       <p style="margin:16px 0 0;font-family:${FONT_STACK};font-size:11px;color:${ZINC_500};text-align:center;line-height:1.5">
-        You&rsquo;re receiving this because you&rsquo;re marked as your club&rsquo;s match secretary in our records.<br>
-        If that&rsquo;s not you, please let us know by replying to this email.
+        ${footerLine(audience)}
       </p>
 
     </td>
@@ -228,6 +238,14 @@ export function inviteEmailHtml({
       <a href="${link}" style="color:${FOREST};text-decoration:underline">${link}</a>
     </p>
 
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#fef9c3" style="background-color:#fef9c3;border-radius:8px;margin-bottom:20px">
+      <tr>
+        <td style="padding:12px 16px;font-family:${FONT_STACK};font-size:13px;line-height:1.55;color:#713f12">
+          <strong>Multiple teams?</strong> If your club has more than one team playing Knocklyon this season, you&rsquo;ll receive a separate invite for each team. Please schedule them all.
+        </td>
+      </tr>
+    </table>
+
     ${p(`Any questions, just reply to this email and it will come straight to the Knocklyon secretary.`)}
 
     <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">
@@ -242,6 +260,70 @@ export function inviteEmailHtml({
   });
 }
 
+// ── CAPTAIN INVITE ──────────────────────────────────────────────────────────
+
+export function captainInviteEmailHtml({
+  captainName,
+  teamLabel,
+  link,
+}: {
+  captainName: string | null;
+  teamLabel: string; // "Knocklyon M1 (Div 5)"
+  link: string;
+}): string {
+  const teamEsc = escapeHtml(teamLabel);
+  const greeting = captainName ? `Hi ${escapeHtml(captainName)},` : "Hi Captain,";
+
+  const body = `
+    ${kicker("Home dates needed")}
+    ${h1(`Share ${teamEsc}'s home dates`)}
+    ${p(greeting)}
+    ${p(`As captain of <strong>${teamEsc}</strong>, please share the dates your team can host at Knocklyon this season. Opposing clubs will book their fixtures from the dates you provide.`)}
+    ${p(`Open your personal captain portal below. It takes a minute.`)}
+
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:12px 0 24px 0">
+      <tr>
+        <td>${button("Open captain portal", link)}</td>
+      </tr>
+    </table>
+
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="${FOREST_TINT}" style="background-color:${FOREST_TINT};border-radius:8px;margin-bottom:20px">
+      <tr>
+        <td style="padding:16px 20px">
+          <p style="margin:0 0 8px 0;font-family:${FONT_STACK};font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:${FOREST_DARK};font-weight:700">
+            Available hosting days
+          </p>
+          <p style="margin:0 0 6px 0;font-family:${FONT_STACK};font-size:14px;line-height:1.55;color:${ZINC_700}">
+            <strong>Monday</strong> (preferred)
+          </p>
+          <p style="margin:0 0 6px 0;font-family:${FONT_STACK};font-size:14px;line-height:1.55;color:${ZINC_700}">
+            <strong>Tuesday</strong> &amp; <strong>Thursday</strong> (club night, use only if needed)
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    ${p(`Please add all the dates when you can play. Matches start at 8:00 PM by default. Once opposing clubs start booking, your dates will fill up on a first-come, first-served basis.`)}
+
+    <p style="margin:0 0 24px 0;font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${ZINC_500};word-break:break-all">
+      <a href="${link}" style="color:${FOREST};text-decoration:underline">${link}</a>
+    </p>
+
+    ${p(`Any questions, just reply to this email.`)}
+
+    <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">
+      Thanks,<br>
+      <strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong>
+    </p>
+  `;
+
+  return shell({
+    preheader: `Share ${teamLabel}'s home dates for the season.`,
+    bodyInner: body,
+    audience: "captain",
+  });
+}
+
 // ── CONFIRMATION EMAIL (both fixtures done) ─────────────────────────────────
 
 export function confirmationEmailHtml({
@@ -253,10 +335,12 @@ export function confirmationEmailHtml({
   homeTime,
   homeVenue,
   homeVenueMapLink,
+  homeGoogleCalLink,
   awayDate,
   awayTime,
   awayVenue,
   awayVenueMapLink,
+  awayGoogleCalLink,
 }: {
   clubName: string;
   knocklyonLabel: string;
@@ -266,10 +350,12 @@ export function confirmationEmailHtml({
   homeTime: string | null;
   homeVenue: string;
   homeVenueMapLink: string;
+  homeGoogleCalLink: string;
   awayDate: string;
   awayTime: string | null;
   awayVenue: string;
   awayVenueMapLink: string;
+  awayGoogleCalLink: string;
 }): string {
   const clubEsc = escapeHtml(clubName);
   const divSuffix = divisionSuffix(division);
@@ -282,6 +368,7 @@ export function confirmationEmailHtml({
     time,
     venue,
     mapLink,
+    googleCalLink,
   }: {
     kickerText: string;
     matchLabel: string;
@@ -289,6 +376,7 @@ export function confirmationEmailHtml({
     time: string | null;
     venue: string;
     mapLink: string;
+    googleCalLink: string;
   }): string {
     const dateStr = escapeHtml(formatDateLong(date));
     const timeStr = time
@@ -299,6 +387,23 @@ export function confirmationEmailHtml({
       : `<span style="color:${ZINC_500}">To be confirmed</span>`;
     const mapStr = mapLink
       ? `<br><a href="${mapLink}" style="font-family:${FONT_STACK};font-size:13px;color:${FOREST};text-decoration:none">Open in Google Maps &rarr;</a>`
+      : "";
+    const calStr = googleCalLink
+      ? `
+        <tr>
+          <td colspan="2" style="padding-top:12px">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+              <tr>
+                <td bgcolor="${WHITE}" style="background-color:${WHITE};border:1px solid ${FOREST};border-radius:6px">
+                  <a href="${googleCalLink}" target="_blank" style="display:inline-block;padding:8px 14px;font-family:${FONT_STACK};font-size:13px;font-weight:600;color:${FOREST};text-decoration:none;line-height:1">
+                    📅 Add to Google Calendar
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `
       : "";
 
     return `
@@ -325,6 +430,7 @@ export function confirmationEmailHtml({
                   ${venueStr}${mapStr}
                 </td>
               </tr>
+              ${calStr}
             </table>
           </td>
         </tr>
@@ -345,6 +451,7 @@ export function confirmationEmailHtml({
       time: homeTime,
       venue: homeVenue,
       mapLink: homeVenueMapLink,
+      googleCalLink: homeGoogleCalLink,
     })}
 
     ${fixtureCard({
@@ -354,9 +461,11 @@ export function confirmationEmailHtml({
       time: awayTime,
       venue: awayVenue,
       mapLink: awayVenueMapLink,
+      googleCalLink: awayGoogleCalLink,
     })}
 
-    ${p(`<strong>Please add both fixtures to your team&rsquo;s calendar.</strong> If anything needs to change, just reply and we&rsquo;ll sort it.`, 24)}
+    ${p(`Both fixtures are also attached as a <strong>calendar file</strong>. Apple Mail, Outlook, and Gmail will offer an "Add to calendar" prompt for the attachment. Google Cal users can also use the buttons above.`, 8)}
+    ${p(`If anything needs to change, just reply and we&rsquo;ll sort it.`, 24)}
 
     <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">
       Best of luck for the season,<br>

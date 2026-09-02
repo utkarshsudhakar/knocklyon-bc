@@ -53,34 +53,53 @@ export function AddKnocklyonTeamForm() {
   );
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-4 sm:gap-2">
-      <input
-        name="name"
-        placeholder="Short name (e.g. M1)"
-        required
-        className="rounded border border-zinc-300 px-3 py-2"
-      />
-      <input
-        name="display_name"
-        placeholder="Display name (e.g. Men's 1)"
-        title="Long name as it should appear in TinaCMS export. Falls back to short name if empty."
-        className="rounded border border-zinc-300 px-3 py-2"
-      />
-      <input
-        name="division"
-        placeholder="Division (e.g. Div 5)"
-        className="rounded border border-zinc-300 px-3 py-2"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-forest px-4 py-2 text-white hover:bg-forest-dark disabled:opacity-60"
-      >
-        {pending ? "Adding…" : "Add team"}
-      </button>
+    <form action={action} className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-2">
+        <input
+          name="name"
+          placeholder="Short name (e.g. M1)"
+          required
+          className="rounded border border-zinc-300 px-3 py-2"
+        />
+        <input
+          name="display_name"
+          placeholder="Display name (e.g. Men's 1)"
+          title="Long name for TinaCMS export. Falls back to short name if empty."
+          className="rounded border border-zinc-300 px-3 py-2"
+        />
+        <input
+          name="division"
+          placeholder="Division (e.g. Div 5)"
+          className="rounded border border-zinc-300 px-3 py-2"
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-2">
+        <input
+          name="captain_name"
+          placeholder="Captain name (optional)"
+          className="rounded border border-zinc-300 px-3 py-2"
+        />
+        <input
+          name="captain_email"
+          type="email"
+          placeholder="Captain email (optional)"
+          className="rounded border border-zinc-300 px-3 py-2"
+        />
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded bg-forest px-4 py-2 text-white hover:bg-forest-dark disabled:opacity-60"
+        >
+          {pending ? "Adding…" : "Add team"}
+        </button>
+      </div>
       {state.error && (
-        <p className="sm:col-span-4 text-sm text-red-600">{state.error}</p>
+        <p className="text-sm text-red-600">{state.error}</p>
       )}
+      <p className="text-xs text-zinc-500">
+        Captain details are optional. Add them later if you want the captain
+        to set their own home dates via the captain portal.
+      </p>
     </form>
   );
 }
@@ -161,20 +180,11 @@ export function AddTeamSlotForm({ teamId }: { teamId: string }) {
   );
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-4 sm:gap-2">
+    <form action={action} className="grid gap-3 sm:grid-cols-3 sm:gap-2">
       <input type="hidden" name="knocklyon_team_id" value={teamId} />
       <input
         type="date"
         name="slot_date"
-        required
-        className="rounded border border-zinc-300 px-3 py-2"
-      />
-      <input
-        type="number"
-        name="capacity"
-        min={1}
-        defaultValue={1}
-        placeholder="Venue capacity"
         required
         className="rounded border border-zinc-300 px-3 py-2"
       />
@@ -198,8 +208,12 @@ export function AddTeamSlotForm({ teamId }: { teamId: string }) {
         {pending ? "Adding…" : "Add date"}
       </button>
       {state.error && (
-        <p className="sm:col-span-4 text-sm text-red-600">{state.error}</p>
+        <p className="sm:col-span-3 text-sm text-red-600">{state.error}</p>
       )}
+      <p className="sm:col-span-3 text-xs text-zinc-500">
+        Capacity is set automatically by day of week: Monday = 3 courts, Tue &
+        Thu = 1 court, other days can&rsquo;t host.
+      </p>
     </form>
   );
 }

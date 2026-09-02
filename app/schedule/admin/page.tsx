@@ -20,8 +20,10 @@ import {
   acceptProposedDate,
   deleteKnocklyonTeam,
   setMatchTime,
+  sendCaptainInvite,
+  updateKnocklyonTeamCaptain,
 } from "./actions";
-import CopyJson from "./copy-json";
+import DownloadJson from "./copy-json";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Scheduling admin — Knocklyon BC" };
@@ -34,6 +36,10 @@ type KnocklyonTeam = {
   name: string;
   division: string | null;
   display_name: string | null;
+  captain_name: string | null;
+  captain_email: string | null;
+  access_token: string | null;
+  invite_sent_at: string | null;
 };
 type Club = {
   id: string;
@@ -45,6 +51,7 @@ type Club = {
   venue_location: string | null;
   venue_map_link: string | null;
   secretary_note: string | null;
+  invite_sent_at: string | null;
 };
 type Slot = { id: string; slot_date: string; capacity: number };
 type ProposedDate = { date: string; time: string | null };
@@ -108,6 +115,8 @@ export default async function AdminPage({
     club?: string;
     date?: string;
     team?: string;
+    team_name?: string;
+    reason?: string;
   }>;
 }) {
   const store = await cookies();
@@ -115,12 +124,13 @@ export default async function AdminPage({
 
   if (!isAuthed) return <LoginForm />;
 
-  const {
-    msg,
-    club: clubMsgName,
-    date: msgDate,
-    team: selectedTeamId,
-  } = await searchParams;
+  const params = await searchParams;
+  const msg = params.msg;
+  const clubMsgName = params.club;
+  const msgDate = params.date;
+  const teamMsgName = params.team_name;
+  const msgReason = params.reason;
+  const selectedTeamId = params.team;
 
   const supabase = getSupabase();
 
@@ -154,7 +164,13 @@ export default async function AdminPage({
       </header>
 
       {msg && (
-        <MessageBanner code={msg} clubName={clubMsgName} date={msgDate} />
+        <MessageBanner
+          code={msg}
+          clubName={clubMsgName}
+          date={msgDate}
+          teamName={teamMsgName}
+          reason={msgReason}
+        />
       )}
 
       {/* ─── KNOCKLYON TEAMS ────────────────────────────────────────── */}
@@ -166,31 +182,108 @@ export default async function AdminPage({
         </p>
         <AddKnocklyonTeamForm />
         {teamsList.length > 0 && (
-          <ul className="flex flex-wrap gap-2 pt-1">
+          <ul className="divide-y divide-zinc-200 border border-zinc-200 rounded">
             {teamsList.map((t) => (
-              <li
-                key={t.id}
-                className="inline-flex items-center gap-2 rounded border border-zinc-200 px-2 py-1 text-sm"
-              >
-                <span>
-                  {t.name}
-                  {t.display_name && (
-                    <span className="ml-1 text-zinc-500">
-                      &ldquo;{t.display_name}&rdquo;
-                    </span>
-                  )}
-                  {t.division ? ` (${t.division})` : ""}
-                </span>
-                <form action={deleteKnocklyonTeam}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <button
-                    type="submit"
-                    className="text-xs text-red-600 hover:underline"
-                    title="Delete team (must have no clubs assigned)"
+              <li key={t.id} className="p-3 space-y-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium">
+                      {t.name}
+                      {t.display_name && (
+                        <span className="ml-2 text-sm font-normal text-zinc-500">
+                          &ldquo;{t.display_name}&rdquo;
+                        </span>
+                      )}
+                      {t.division && (
+                        <span className="ml-2 text-xs rounded bg-zinc-100 text-zinc-700 px-2 py-0.5">
+                          {t.division}
+                        </span>
+                      )}
+                    </div>
+                    {t.captain_email ? (
+                      <div className="text-sm text-zinc-500 mt-0.5">
+                        Captain:{" "}
+                        {t.captain_name ? `${t.captain_name} — ` : ""}
+                        {t.captain_email}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-amber-700 mt-0.5">
+                        No captain set — expand &ldquo;Edit captain&rdquo;
+                        below to add one.
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-4">
+                      {t.captain_email && (
+                        <form action={sendCaptainInvite}>
+                          <input type="hidden" name="id" value={t.id} />
+                          <button
+                            type="submit"
+                            className="text-sm text-forest hover:underline"
+                          >
+                            {t.invite_sent_at
+                              ? "Resend captain invite"
+                              : "Send captain invite"}
+                          </button>
+                        </form>
+                      )}
+                      <form action={deleteKnocklyonTeam}>
+                        <input type="hidden" name="id" value={t.id} />
+                        <button
+                          type="submit"
+                          className="text-sm text-red-600 hover:underline"
+                          title="Delete team (must have no clubs assigned)"
+                        >
+                          Delete
+                        </button>
+                      </form>
+                    </div>
+                    {t.invite_sent_at && (
+                      <span className="text-xs text-zinc-400">
+                        Last sent {formatRelative(t.invite_sent_at)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <details className="group">
+                  <summary className="text-xs text-zinc-500 hover:text-forest cursor-pointer select-none inline-flex items-center gap-1 list-none [&::-webkit-details-marker]:hidden">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 20 20"
+                      className="w-3 h-3 transition-transform group-open:rotate-90"
+                      fill="currentColor"
+                    >
+                      <path d="M7 5l6 5-6 5V5z" />
+                    </svg>
+                    Edit captain
+                  </summary>
+                  <form
+                    action={updateKnocklyonTeamCaptain}
+                    className="mt-2 grid gap-2 sm:grid-cols-3"
                   >
-                    ×
-                  </button>
-                </form>
+                    <input type="hidden" name="team_id" value={t.id} />
+                    <input
+                      name="captain_name"
+                      placeholder="Captain name"
+                      defaultValue={t.captain_name ?? ""}
+                      className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="captain_email"
+                      type="email"
+                      placeholder="Captain email"
+                      defaultValue={t.captain_email ?? ""}
+                      className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded border border-forest bg-white text-forest text-sm font-medium hover:bg-forest hover:text-white px-4 py-2"
+                    >
+                      Save captain
+                    </button>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>
@@ -199,7 +292,10 @@ export default async function AdminPage({
 
       {/* ─── TAB BAR ───────────────────────────────────────────────── */}
       {teamsList.length > 0 && (
-        <nav aria-label="Teams" className="flex flex-wrap gap-2">
+        <nav
+          aria-label="Teams"
+          className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-white/85 backdrop-blur border-b border-zinc-200 flex flex-wrap gap-2"
+        >
           {teamsList.map((t) => {
             const active = t.id === selectedTeamId;
             return (
@@ -320,13 +416,20 @@ async function TeamPanel({
     proposed_dates: f.proposed_dates,
   }));
 
+  const confirmedCount = fixturesList.filter(
+    (f) => f.status === "confirmed"
+  ).length;
+
   return (
-    <div className="space-y-10">
-      {/* Opposing clubs */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">
-          Opposing clubs for {team.name}
-        </h2>
+    <div className="space-y-6">
+      {/* Setup accordions — start closed once populated */}
+      <CollapsibleSection
+        title={`Opposing clubs`}
+        count={clubsList.length}
+        countLabel="clubs"
+        emptyHint="Add clubs playing this team"
+        openByDefault={clubsList.length === 0}
+      >
         <p className="text-sm text-zinc-600">
           Each opposing club auto-generates two fixtures (home + away).
         </p>
@@ -342,14 +445,17 @@ async function TeamPanel({
             ))}
           </ul>
         )}
-      </section>
+      </CollapsibleSection>
 
-      {/* Home dates for this team */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Home dates for {team.name}</h2>
+      <CollapsibleSection
+        title="Home dates"
+        count={teamSlots.length}
+        countLabel="dates"
+        emptyHint="Add dates this team can host at Knocklyon"
+        openByDefault={teamSlots.length === 0}
+      >
         <p className="text-sm text-zinc-600">
-          The dates this team is available to host at Knocklyon. Capacity is
-          venue-wide (shared across all teams on the same date).
+          Capacity is venue-wide (shared across all teams on the same date).
         </p>
         <AddTeamSlotForm teamId={team.id} />
         {teamSlots.length === 0 ? (
@@ -408,11 +514,18 @@ async function TeamPanel({
             })}
           </ul>
         )}
-      </section>
+      </CollapsibleSection>
 
-      {/* Fixtures */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Fixtures for {team.name}</h2>
+      {/* Fixtures — main content, always expanded */}
+      <section className="space-y-4 pt-2">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">Fixtures</h2>
+          {fixturesList.length > 0 && (
+            <span className="text-sm text-zinc-500">
+              {confirmedCount} of {fixturesList.length} confirmed
+            </span>
+          )}
+        </div>
         {fixturesList.length === 0 ? (
           <p className="text-sm text-zinc-500 italic">
             Add opposing clubs above to generate fixtures.
@@ -427,15 +540,78 @@ async function TeamPanel({
         )}
       </section>
 
-      {/* Export */}
-      <ExportPanel
-        team={team}
-        fixtures={fixturesList}
-        clubById={clubById}
-        slotById={slotById}
-        seasonFolder={seasonFolder}
-      />
+      {/* Export — only when there's something to export, collapsed by default */}
+      {confirmedCount > 0 && (
+        <CollapsibleSection
+          title="Export for TinaCMS"
+          count={confirmedCount}
+          countLabel="ready"
+          openByDefault={false}
+        >
+          <ExportPanel
+            team={team}
+            fixtures={fixturesList}
+            clubById={clubById}
+            slotById={slotById}
+            seasonFolder={seasonFolder}
+          />
+        </CollapsibleSection>
+      )}
     </div>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  count,
+  countLabel,
+  emptyHint,
+  openByDefault,
+  children,
+}: {
+  title: string;
+  count: number;
+  countLabel: string;
+  emptyHint?: string;
+  openByDefault: boolean;
+  children: React.ReactNode;
+}) {
+  const isEmpty = count === 0;
+  return (
+    <details
+      open={openByDefault}
+      className="group rounded-lg border border-zinc-200 bg-white overflow-hidden"
+    >
+      <summary className="flex items-center justify-between gap-3 cursor-pointer select-none px-4 py-3 hover:bg-zinc-50 list-none [&::-webkit-details-marker]:hidden">
+        <div className="flex items-center gap-3 min-w-0">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            className="w-4 h-4 text-zinc-400 transition-transform group-open:rotate-90 shrink-0"
+            fill="currentColor"
+          >
+            <path d="M7 5l6 5-6 5V5z" />
+          </svg>
+          <h2 className="text-base font-semibold text-zinc-900 truncate">
+            {title}
+          </h2>
+          {isEmpty ? (
+            emptyHint && (
+              <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                {emptyHint}
+              </span>
+            )
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-forest/10 text-forest text-xs font-semibold px-2 py-0.5">
+              {count} {countLabel}
+            </span>
+          )}
+        </div>
+      </summary>
+      <div className="px-4 py-4 border-t border-zinc-100 space-y-4">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -473,22 +649,32 @@ function ClubRow({ club }: { club: Club }) {
             /schedule/c/{club.access_token}
           </div>
         </div>
-        <div className="flex items-center gap-4 shrink-0">
-          <form action={sendInvite}>
-            <input type="hidden" name="id" value={club.id} />
-            <button type="submit" className="text-sm text-forest hover:underline">
-              Send invite
-            </button>
-          </form>
-          <form action={deleteClub}>
-            <input type="hidden" name="id" value={club.id} />
-            <button
-              type="submit"
-              className="text-sm text-red-600 hover:underline"
-            >
-              Delete
-            </button>
-          </form>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex items-center gap-4">
+            <form action={sendInvite}>
+              <input type="hidden" name="id" value={club.id} />
+              <button
+                type="submit"
+                className="text-sm text-forest hover:underline"
+              >
+                {club.invite_sent_at ? "Resend invite" : "Send invite"}
+              </button>
+            </form>
+            <form action={deleteClub}>
+              <input type="hidden" name="id" value={club.id} />
+              <button
+                type="submit"
+                className="text-sm text-red-600 hover:underline"
+              >
+                Delete
+              </button>
+            </form>
+          </div>
+          {club.invite_sent_at && (
+            <span className="text-xs text-zinc-400">
+              Last sent {formatRelative(club.invite_sent_at)}
+            </span>
+          )}
         </div>
       </div>
       {club.secretary_note && (
@@ -773,11 +959,12 @@ function ExportPanel({
       </h2>
       {seasonFolder ? (
         <p className="text-sm text-zinc-600">
-          Copy each JSON block below into a new file in{" "}
+          Click <strong>Download JSON</strong> on each fixture below, then drop
+          the file into{" "}
           <code className="rounded bg-zinc-100 px-1 py-0.5">
             content/fixtures/{seasonFolder}/
           </code>{" "}
-          using the suggested filename, then commit and push.
+          in the repo. Commit and push when you&rsquo;re done.
         </p>
       ) : (
         <p className="text-sm text-amber-700">
@@ -811,7 +998,7 @@ function ExportPanel({
                 <code className="text-sm font-medium text-zinc-800">
                   {item.filename}
                 </code>
-                <CopyJson data={item.json} label="Copy JSON" />
+                <DownloadJson data={item.json} filename={item.filename} />
               </div>
               {!item.hasLocation && (
                 <div className="text-xs text-red-700">
@@ -844,12 +1031,17 @@ function MessageBanner({
   code,
   clubName,
   date,
+  teamName,
+  reason,
 }: {
   code: string;
   clubName?: string;
   date?: string;
+  teamName?: string;
+  reason?: string;
 }) {
   const label = clubName ? decodeURIComponent(clubName) : "";
+  const teamLabel = teamName ? decodeURIComponent(teamName) : "";
   if (code === "away_conflict") {
     const d = date ? formatDate(decodeURIComponent(date)) : "that date";
     return (
@@ -904,6 +1096,43 @@ function MessageBanner({
       </div>
     );
   }
+  if (code === "captain_invite_sent") {
+    return (
+      <div
+        role="status"
+        className="rounded border border-forest bg-forest/10 text-forest px-4 py-3 text-sm"
+      >
+        Captain invite sent for {teamLabel}.
+      </div>
+    );
+  }
+  if (code === "captain_invite_logged") {
+    return (
+      <div
+        role="status"
+        className="rounded border border-amber-300 bg-amber-50 text-amber-800 px-4 py-3 text-sm"
+      >
+        Email not configured — captain link for {teamLabel} logged to server
+        console.
+      </div>
+    );
+  }
+  if (code === "captain_invite_failed") {
+    const detail =
+      reason === "no_email"
+        ? " — no captain email set. Edit the team to add one."
+        : reason === "no_team"
+          ? " — team not found."
+          : ". Check server logs.";
+    return (
+      <div
+        role="alert"
+        className="rounded border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm"
+      >
+        Captain invite for {teamLabel} failed{detail}
+      </div>
+    );
+  }
   return null;
 }
 
@@ -936,6 +1165,24 @@ function formatDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("en-IE", {
     weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatRelative(isoTimestamp: string): string {
+  const diffMs = Date.now() - new Date(isoTimestamp).getTime();
+  if (diffMs < 0) return "just now";
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const d = new Date(isoTimestamp);
+  return d.toLocaleDateString("en-IE", {
     day: "numeric",
     month: "short",
     year: "numeric",

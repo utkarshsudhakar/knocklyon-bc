@@ -1,5 +1,10 @@
 import { getSupabase } from "./supabase";
 import { confirmationEmailHtml } from "./email-templates";
+import {
+  generateIcs,
+  googleCalendarLink,
+  type CalendarEvent,
+} from "./calendar";
 
 function knocklyonLabel(teamName: string | null): string {
   return `Knocklyon${teamName ? ` ${teamName}` : ""}`;
@@ -125,6 +130,29 @@ export async function maybeSendConfirmationEmail(clubId: string): Promise<void> 
     return;
   }
 
+  // Build calendar events for both fixtures.
+  const homeMatchTime = home.match_time ?? "20:00";
+  const awayMatchTime = away.match_time ?? "19:00";
+  const homeEvent: CalendarEvent = {
+    uid: `kbc-home-${clubId}@knocklyonbc.ie`,
+    title: `${knocklyon} vs ${opponent}`,
+    date: homeDate,
+    time: homeMatchTime,
+    location: knocklyonHome,
+    description: `League fixture: ${matchup}. Home for Knocklyon.`,
+  };
+  const awayEvent: CalendarEvent = {
+    uid: `kbc-away-${clubId}@knocklyonbc.ie`,
+    title: `${opponent} vs ${knocklyon}`,
+    date: awayDate,
+    time: awayMatchTime,
+    location: club.venue_location ?? "",
+    description: `League fixture: ${matchup}. Away for Knocklyon.`,
+  };
+  const icsContent = generateIcs([homeEvent, awayEvent], new Date());
+  const homeGoogleCalLink = googleCalendarLink(homeEvent);
+  const awayGoogleCalLink = googleCalendarLink(awayEvent);
+
   try {
     const { Resend } = await import("resend");
     const resend = new Resend(apiKey);
@@ -140,14 +168,22 @@ export async function maybeSendConfirmationEmail(clubId: string): Promise<void> 
         opponentLabel: opponent,
         division: kTeamDivision,
         homeDate,
-        homeTime: home.match_time ?? "20:00",
+        homeTime: homeMatchTime,
         homeVenue: knocklyonHome,
         homeVenueMapLink: knocklyonHomeMap,
+        homeGoogleCalLink,
         awayDate,
-        awayTime: away.match_time ?? null,
+        awayTime: awayMatchTime,
         awayVenue: club.venue_location ?? "",
         awayVenueMapLink: club.venue_map_link ?? "",
+        awayGoogleCalLink,
       }),
+      attachments: [
+        {
+          filename: "knocklyon-fixtures.ics",
+          content: Buffer.from(icsContent).toString("base64"),
+        },
+      ],
     });
 
     if (result.error) {

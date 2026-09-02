@@ -2,44 +2,40 @@
 
 import { useState } from "react";
 
-export default function CopyJson({
+export default function DownloadJson({
   data,
-  label = "Copy",
+  filename,
+  label = "Download JSON",
 }: {
   data: unknown;
+  filename: string;
   label?: string;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
 
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // fallback: create a textarea and select
-      const ta = document.createElement("textarea");
-      ta.value = JSON.stringify(data, null, 2);
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand("copy");
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      } catch {
-        // give up silently
-      }
-      document.body.removeChild(ta);
-    }
+  function handleDownload() {
+    const content = JSON.stringify(data, null, 2);
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Free the URL after a tick so Safari has time to trigger the download
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 1500);
   }
 
   return (
     <button
       type="button"
-      onClick={handleCopy}
-      className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs text-zinc-800 hover:border-forest hover:text-forest"
+      onClick={handleDownload}
+      className="rounded border border-forest bg-forest text-white px-3 py-1 text-xs font-medium hover:bg-forest-dark"
     >
-      {copied ? "Copied!" : label}
+      {downloaded ? "Downloaded ✓" : `↓ ${label}`}
     </button>
   );
 }
