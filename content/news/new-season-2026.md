@@ -1,6 +1,7 @@
 ---
 title: New Season Kicks Off — Welcome Back!
 date: 2026-09-01T00:00:00.000Z
+cover_image: /Terenure-Badminton-Centre-Leinster.jpg
 excerpt: The 2026/27 Leinster Badminton season is underway and Knocklyon BC is back on the courts. Here's what to expect this season.
 ---
 
@@ -8,7 +9,7 @@ The new season is here and we're delighted to welcome everyone back to Knocklyon
 
 ## What's new this season
 
-This year we're fielding **five teams** across the Leinster leagues — our strongest representation yet. Training nights remain on **Mondays, Tuesdays, and Thursdays**, with the first official club night taking place this Tuesday.
+This year we're fielding **ten teams** across the Leinster leagues — our strongest representation yet. Training nights remain on **Mondays, Tuesdays, and Thursdays**, with the first official club night taking place this Tuesday.
 
 ## Fixtures
 
