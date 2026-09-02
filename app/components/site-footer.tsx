@@ -25,7 +25,10 @@ export default function SiteFooter({ settings }: Props) {
   const name = settings?.club_name ?? "Knocklyon Badminton Club";
 
   return (
-    <footer className="border-t border-stone-200 bg-stone-800 text-stone-300">
+    <footer
+      className="border-t bg-stone-800 text-stone-300"
+      style={{ borderTopColor: "rgba(255,255,255,0.1)" }}
+    >
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
 
@@ -128,7 +131,10 @@ export default function SiteFooter({ settings }: Props) {
         </div>
 
         {/* Sponsors + Affiliations */}
-        <div className="mt-8 border-t border-white/10 pt-6">
+        <div
+          className="mt-8 border-t pt-6"
+          style={{ borderTopColor: "rgba(255,255,255,0.1)" }}
+        >
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
 
             {/* Sponsors */}

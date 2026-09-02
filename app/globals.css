@@ -23,8 +23,14 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-*, *::before, *::after {
-  border-color: #e7e5e4;
+/* Tailwind v3 → v4 migration shim: v3 defaulted borders to gray-200, v4
+   defaults to currentColor. Kept here so any element using a bare `border`
+   utility still gets the same soft neutral it did on v3. Scoped to
+   @layer base so explicit `border-*` utilities can still override it. */
+@layer base {
+  *, *::before, *::after {
+    border-color: #e7e5e4;
+  }
 }
 
 @keyframes announcement-blink {
