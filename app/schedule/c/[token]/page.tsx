@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getSupabase } from "../../_lib/supabase";
 import { proposeAwayDates, saveVenueDetails } from "./actions";
 import HomeCalendar from "./home-calendar";
+import SubmitButton from "../../_lib/submit-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Schedule your fixtures — Knocklyon BC" };
@@ -477,12 +478,12 @@ function VenueForm({
           />
         </label>
       </div>
-      <button
-        type="submit"
+      <SubmitButton
         className="rounded border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-800 hover:border-forest hover:text-forest"
+        pendingLabel="Saving…"
       >
         Save venue details
-      </button>
+      </SubmitButton>
     </form>
   );
 }
@@ -585,12 +586,12 @@ function AwayProposalForm({
           />
         </label>
 
-        <button
-          type="submit"
+        <SubmitButton
           className="rounded bg-forest px-4 py-2 text-white text-sm hover:bg-forest-dark"
+          pendingLabel={alreadyProposed ? "Updating…" : "Submitting…"}
         >
           {alreadyProposed ? "Update proposal" : "Submit proposal"}
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

@@ -25,6 +25,7 @@ import {
 } from "./actions";
 import DownloadJson from "./copy-json";
 import ResetSeasonForm from "./reset-season";
+import SubmitButton from "../_lib/submit-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Scheduling admin — Knocklyon BC" };
@@ -219,14 +220,14 @@ export default async function AdminPage({
                       {t.captain_email && (
                         <form action={sendCaptainInvite}>
                           <input type="hidden" name="id" value={t.id} />
-                          <button
-                            type="submit"
+                          <SubmitButton
                             className="text-sm text-forest hover:underline"
+                            pendingLabel="Sending…"
                           >
                             {t.invite_sent_at
                               ? "Resend captain invite"
                               : "Send captain invite"}
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                       <form action={deleteKnocklyonTeam}>
@@ -658,12 +659,12 @@ function ClubRow({ club }: { club: Club }) {
           <div className="flex items-center gap-4">
             <form action={sendInvite}>
               <input type="hidden" name="id" value={club.id} />
-              <button
-                type="submit"
+              <SubmitButton
                 className="text-sm text-forest hover:underline"
+                pendingLabel="Sending…"
               >
                 {club.invite_sent_at ? "Resend invite" : "Send invite"}
-              </button>
+              </SubmitButton>
             </form>
             <form action={deleteClub}>
               <input type="hidden" name="id" value={club.id} />
@@ -808,12 +809,12 @@ function FixtureTable({
                                 : "No start time set"}
                             </div>
                           </div>
-                          <button
-                            type="submit"
+                          <SubmitButton
                             className="rounded bg-forest text-white px-2.5 py-1 text-xs hover:bg-forest-dark"
+                            pendingLabel="Accepting…"
                           >
                             Accept
-                          </button>
+                          </SubmitButton>
                         </form>
                       ))}
                       <details className="mt-1">

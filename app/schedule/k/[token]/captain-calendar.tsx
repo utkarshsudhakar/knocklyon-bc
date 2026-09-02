@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { captainAddDates } from "./actions";
+import SubmitButton from "../../_lib/submit-button";
 
 type Props = {
   token: string;
@@ -98,12 +99,12 @@ export default function CaptainCalendar({
         <form action={captainAddDates} className="space-y-2">
           <input type="hidden" name="token" value={token} />
           <input type="hidden" name="dates" value={selectedIso} />
-          <button
-            type="submit"
-            className="rounded bg-forest px-5 py-2 text-white text-sm font-medium hover:bg-forest-dark"
+          <SubmitButton
+            className="rounded bg-forest px-5 py-2 text-white text-sm font-medium hover:bg-forest-dark disabled:bg-forest/70"
+            pendingLabel={`Adding ${selected.length} date${selected.length === 1 ? "" : "s"}…`}
           >
             Add {selected.length} date{selected.length === 1 ? "" : "s"}
-          </button>
+          </SubmitButton>
           <p className="text-xs text-zinc-500">
             Matches start at 8:00 PM by default.
           </p>

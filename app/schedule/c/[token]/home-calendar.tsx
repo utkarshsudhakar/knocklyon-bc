@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { bookHomeDate } from "./actions";
+import SubmitButton from "../../_lib/submit-button";
 
 type SlotOption = {
   id: string;
@@ -88,12 +89,12 @@ export default function HomeCalendar({
             <input type="hidden" name="token" value={token} />
             <input type="hidden" name="fixture_id" value={fixtureId} />
             <input type="hidden" name="slot_id" value={selectedSlot.id} />
-            <button
-              type="submit"
+            <SubmitButton
               className="rounded bg-forest px-4 py-2 text-white text-sm hover:bg-forest-dark"
+              pendingLabel="Confirming…"
             >
               Yes, confirm
-            </button>
+            </SubmitButton>
             <button
               type="button"
               onClick={() => setSelected(undefined)}

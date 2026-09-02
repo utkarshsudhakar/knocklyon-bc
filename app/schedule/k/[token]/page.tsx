@@ -7,6 +7,7 @@ import {
   hostableDays,
 } from "../../_lib/config";
 import CaptainCalendar from "./captain-calendar";
+import SubmitButton from "../../_lib/submit-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Share your home dates — Knocklyon BC" };
@@ -194,18 +195,13 @@ export default async function CaptainPage({
                       name="home_slot_id"
                       value={e.slotId}
                     />
-                    <button
-                      type="submit"
-                      className="text-sm text-red-600 hover:underline"
-                      title={
-                        isMineBooked
-                          ? "Cannot remove a date with your team already booked"
-                          : ""
-                      }
+                    <SubmitButton
+                      className="text-sm text-red-600 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                      pendingLabel="Removing…"
                       disabled={isMineBooked}
                     >
                       Remove
-                    </button>
+                    </SubmitButton>
                   </form>
                 </li>
               );
