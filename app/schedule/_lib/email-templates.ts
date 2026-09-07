@@ -291,19 +291,19 @@ export function captainInviteEmailHtml({
       <tr>
         <td style="padding:16px 20px">
           <p style="margin:0 0 8px 0;font-family:${FONT_STACK};font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:${FOREST_DARK};font-weight:700">
-            Available hosting days
+            How it works
           </p>
           <p style="margin:0 0 6px 0;font-family:${FONT_STACK};font-size:14px;line-height:1.55;color:${ZINC_700}">
-            <strong>Monday</strong> (preferred)
+            The season runs <strong>November through March</strong>. Please pick the <strong>Mondays</strong> your team can host.
           </p>
-          <p style="margin:0 0 6px 0;font-family:${FONT_STACK};font-size:14px;line-height:1.55;color:${ZINC_700}">
-            <strong>Tuesday</strong> &amp; <strong>Thursday</strong> (club night, use only if needed)
+          <p style="margin:0;font-family:${FONT_STACK};font-size:14px;line-height:1.55;color:${ZINC_700}">
+            Need a Tuesday or Thursday slot? Contact the club scheduler and we'll add it manually.
           </p>
         </td>
       </tr>
     </table>
 
-    ${p(`Please add all the dates when you can play. Matches start at 8:00 PM by default. Once opposing clubs start booking, your dates will fill up on a first-come, first-served basis.`)}
+    ${p(`Please add all the Mondays when your team can host. Matches start at 8:00 PM by default. Once opposing clubs start booking, your dates will fill up on a first-come, first-served basis. You can also leave a note on your portal about your team's availability for away games.`)}
 
     <p style="margin:0 0 24px 0;font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${ZINC_500};word-break:break-all">
       <a href="${link}" style="color:${FOREST};text-decoration:underline">${link}</a>
