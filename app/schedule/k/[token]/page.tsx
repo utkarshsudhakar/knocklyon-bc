@@ -1,11 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSupabase } from "../../_lib/supabase";
-import { captainRemoveDate } from "./actions";
-import {
-  WEEKDAY_CAPACITY,
-  WEEKDAY_NAMES,
-  hostableDays,
-} from "../../_lib/config";
+import { captainRemoveDate, captainSaveNote } from "./actions";
+import { CAPTAIN_ALLOWED_WEEKDAYS, getCurrentSeason } from "../../_lib/config";
 import CaptainCalendar from "./captain-calendar";
 import SubmitButton from "../../_lib/submit-button";
 
@@ -17,6 +13,7 @@ type Team = {
   name: string;
   division: string | null;
   captain_name: string | null;
+  captain_note: string | null;
 };
 
 type SlotRow = {
@@ -42,7 +39,7 @@ export default async function CaptainPage({
   const supabase = getSupabase();
   const { data: team } = await supabase
     .from("knocklyon_teams")
-    .select("id, name, division, captain_name")
+    .select("id, name, division, captain_name, captain_note")
     .eq("access_token", token)
     .single<Team>();
 
@@ -51,6 +48,7 @@ export default async function CaptainPage({
   const teamLabel = `Knocklyon ${team.name}${
     team.division ? ` (${team.division})` : ""
   }`;
+  const season = getCurrentSeason();
 
   const [slotsRes, allFixturesRes, teamClubsRes] = await Promise.all([
     supabase
@@ -116,20 +114,14 @@ export default async function CaptainPage({
 
       <section className="rounded-lg border border-forest/30 bg-forest/5 p-5 space-y-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-forest">
-          Available hosting days
+          How this works
         </div>
-        <ul className="text-sm text-zinc-800 space-y-1">
-          {Object.entries(WEEKDAY_CAPACITY)
-            .filter(([, cap]) => cap > 0)
-            .map(([d]) => (
-              <li key={d}>
-                <strong>{WEEKDAY_NAMES[parseInt(d, 10)]}</strong>
-                {parseInt(d, 10) === 1
-                  ? " (preferred)"
-                  : " (club night, use only if needed)"}
-              </li>
-            ))}
-        </ul>
+        <p className="text-sm text-zinc-800">
+          The season runs <strong>November through March</strong>. Please pick
+          the <strong>Mondays</strong> your team is available to host. If you
+          need a Tuesday or Thursday slot, contact the club scheduler
+          separately.
+        </p>
       </section>
 
       <section className="rounded-lg border border-zinc-200 bg-white p-5 sm:p-6 space-y-4">
@@ -138,14 +130,16 @@ export default async function CaptainPage({
             Pick your dates
           </h2>
           <p className="text-sm text-zinc-600 mt-0.5">
-            Select all the dates your team can host by clicking them on the
-            calendar, then add them in one go.
+            Select all the Mondays your team can host, then add them in one
+            go.
           </p>
         </div>
         <CaptainCalendar
           token={token}
           existingDates={entries.map((e) => e.date)}
-          hostableWeekdays={hostableDays()}
+          allowedWeekdays={CAPTAIN_ALLOWED_WEEKDAYS}
+          seasonStartISO={season.startISO}
+          seasonEndISO={season.endISO}
         />
       </section>
 
@@ -210,6 +204,36 @@ export default async function CaptainPage({
         )}
       </section>
 
+      <section className="rounded-lg border border-zinc-200 bg-white p-5 sm:p-6 space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900">
+            Away-game availability note
+          </h2>
+          <p className="text-sm text-zinc-600 mt-0.5">
+            Anything the scheduler should know when booking your away
+            fixtures? e.g. &ldquo;full team not available in November or
+            March&rdquo;, &ldquo;please schedule after 15th November&rdquo;.
+          </p>
+        </div>
+        <form action={captainSaveNote} className="space-y-2">
+          <input type="hidden" name="token" value={token} />
+          <textarea
+            name="note"
+            defaultValue={team.captain_note ?? ""}
+            rows={4}
+            maxLength={2000}
+            placeholder="Optional notes about your team's availability for away matches…"
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest"
+          />
+          <SubmitButton
+            className="rounded bg-forest px-5 py-2 text-white text-sm font-medium hover:bg-forest-dark disabled:bg-forest/70"
+            pendingLabel="Saving…"
+          >
+            Save note
+          </SubmitButton>
+        </form>
+      </section>
+
       <p className="text-xs text-zinc-500">
         Any questions, just reply to the email that brought you here.
       </p>
@@ -240,6 +264,8 @@ function SuccessBanner({
     }
   } else if (code === "date_removed") {
     message = "Date removed.";
+  } else if (code === "note_saved") {
+    message = "Note saved.";
   }
   return (
     <div
@@ -256,7 +282,7 @@ function ErrorBanner({ code }: { code: string }) {
     invalid: "Something wasn't right with that request. Please try again.",
     missing_date: "Please pick a date.",
     day_not_hostable:
-      "Sorry, Knocklyon can't host on that day of the week. Try a Monday, Tuesday or Thursday.",
+      "Please pick a Monday between November and March. If you need a Tuesday or Thursday, contact the club scheduler.",
     already_added: "That date is already in your list.",
     save_failed: "Something went wrong saving. Please try again.",
     has_booking:

@@ -9,36 +9,53 @@ import SubmitButton from "../../_lib/submit-button";
 type Props = {
   token: string;
   existingDates: string[]; // ISO "YYYY-MM-DD"
-  hostableWeekdays: number[]; // e.g. [1, 2, 4]
+  allowedWeekdays: number[]; // e.g. [1] for Mondays
+  seasonStartISO: string; // ISO "YYYY-MM-DD", inclusive
+  seasonEndISO: string; // ISO "YYYY-MM-DD", inclusive
 };
 
 export default function CaptainCalendar({
   token,
   existingDates,
-  hostableWeekdays,
+  allowedWeekdays,
+  seasonStartISO,
+  seasonEndISO,
 }: Props) {
   const [selected, setSelected] = useState<Date[]>([]);
 
-  const { hostableSet, existingSet, existingAsDates, defaultMonth, today } =
-    useMemo(() => {
-      const hostableSet = new Set(hostableWeekdays);
-      const existingSet = new Set(existingDates);
-      const existingAsDates = existingDates.map(parseIso);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const defaultMonth = existingAsDates[0] ?? now;
-      return {
-        hostableSet,
-        existingSet,
-        existingAsDates,
-        defaultMonth,
-        today: now,
-      };
-    }, [existingDates, hostableWeekdays]);
+  const {
+    allowedSet,
+    existingSet,
+    existingAsDates,
+    defaultMonth,
+    today,
+    seasonStart,
+    seasonEnd,
+  } = useMemo(() => {
+    const allowedSet = new Set(allowedWeekdays);
+    const existingSet = new Set(existingDates);
+    const existingAsDates = existingDates.map(parseIso);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const seasonStart = parseIso(seasonStartISO);
+    const seasonEnd = parseIso(seasonEndISO);
+    const fallbackMonth = now < seasonStart ? seasonStart : now;
+    const defaultMonth = existingAsDates[0] ?? fallbackMonth;
+    return {
+      allowedSet,
+      existingSet,
+      existingAsDates,
+      defaultMonth,
+      today: now,
+      seasonStart,
+      seasonEnd,
+    };
+  }, [existingDates, allowedWeekdays, seasonStartISO, seasonEndISO]);
 
   function isDisabled(day: Date): boolean {
     if (day < today) return true;
-    if (!hostableSet.has(day.getDay())) return true;
+    if (day < seasonStart || day > seasonEnd) return true;
+    if (!allowedSet.has(day.getDay())) return true;
     if (existingSet.has(dateKey(day))) return true;
     return false;
   }
@@ -54,6 +71,8 @@ export default function CaptainCalendar({
           selected={selected}
           onSelect={(dates) => setSelected(dates ?? [])}
           defaultMonth={defaultMonth}
+          startMonth={seasonStart}
+          endMonth={seasonEnd}
           disabled={isDisabled}
           modifiers={{ existing: existingAsDates }}
           modifiersClassNames={{
@@ -91,7 +110,7 @@ export default function CaptainCalendar({
           Already added
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-zinc-100" /> Not hostable
+          <span className="w-3 h-3 rounded bg-zinc-100" /> Not selectable
         </span>
       </div>
 
@@ -111,8 +130,8 @@ export default function CaptainCalendar({
         </form>
       ) : (
         <p className="text-sm text-zinc-500">
-          Click one or more Mondays (or Tue / Thu if needed) to select them,
-          then hit <strong>Add</strong>.
+          Click one or more Mondays your team can host, then hit{" "}
+          <strong>Add</strong>.
         </p>
       )}
     </div>

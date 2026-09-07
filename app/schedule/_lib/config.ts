@@ -44,3 +44,31 @@ export const WEEKDAY_NAMES = [
   "Friday",
   "Saturday",
 ];
+
+// Captain-facing constraints. Admins can still add Tue/Thu manually via
+// AddTeamSlotForm — these limits only affect the captain self-service portal.
+export const CAPTAIN_ALLOWED_WEEKDAYS = [1]; // Mondays only
+
+// Season runs Nov 1 → Mar 31. Rolls over in July: before July we're still in
+// the season that started last November; from July on we're pointing at the
+// upcoming season.
+export function getCurrentSeason(now: Date = new Date()): {
+  startISO: string;
+  endISO: string;
+} {
+  const seasonStartYear =
+    now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  return {
+    startISO: `${seasonStartYear}-11-01`,
+    endISO: `${seasonStartYear + 1}-03-31`,
+  };
+}
+
+export function isCaptainAllowedDate(
+  iso: string,
+  now: Date = new Date()
+): boolean {
+  if (!CAPTAIN_ALLOWED_WEEKDAYS.includes(weekdayOf(iso))) return false;
+  const { startISO, endISO } = getCurrentSeason(now);
+  return iso >= startISO && iso <= endISO;
+}

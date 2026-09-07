@@ -42,6 +42,7 @@ type KnocklyonTeam = {
   captain_email: string | null;
   access_token: string | null;
   invite_sent_at: string | null;
+  captain_note: string | null;
 };
 type Club = {
   id: string;
@@ -429,6 +430,14 @@ async function TeamPanel({
 
   return (
     <div className="space-y-6">
+      {team.captain_note && (
+        <div className="rounded border border-amber-200 bg-amber-50 text-amber-900 text-sm px-3 py-2 whitespace-pre-wrap">
+          <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">
+            Note from captain
+          </div>
+          {team.captain_note}
+        </div>
+      )}
       {/* Setup accordions — start closed once populated */}
       <CollapsibleSection
         title={`Opposing clubs`}

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSupabase } from "../../_lib/supabase";
-import { capacityForDate } from "../../_lib/config";
+import { capacityForDate, isCaptainAllowedDate } from "../../_lib/config";
 
 async function findTeamByToken(token: string) {
   if (!token) return null;
@@ -35,6 +35,10 @@ export async function captainAddDates(formData: FormData) {
   let skipped = 0;
 
   for (const dateStr of dates) {
+    if (!isCaptainAllowedDate(dateStr)) {
+      skipped++;
+      continue;
+    }
     const cap = capacityForDate(dateStr);
     if (cap < 1) {
       skipped++;
@@ -76,6 +80,26 @@ export async function captainAddDates(formData: FormData) {
   redirect(
     `/schedule/k/${token}?ok=dates_added&n=${added}${skipped > 0 ? `&skipped=${skipped}` : ""}`
   );
+}
+
+export async function captainSaveNote(formData: FormData) {
+  const token = ((formData.get("token") as string) ?? "").trim();
+  if (!token) redirect(`/schedule/k/${token}?err=invalid`);
+
+  const team = await findTeamByToken(token);
+  if (!team) redirect(`/schedule/k/${token}?err=invalid`);
+
+  const raw = ((formData.get("note") as string) ?? "").trim();
+  const note = raw.length === 0 ? null : raw.slice(0, 2000);
+
+  const { error } = await getSupabase()
+    .from("knocklyon_teams")
+    .update({ captain_note: note })
+    .eq("id", team.id);
+  if (error) redirect(`/schedule/k/${token}?err=save_failed`);
+
+  revalidatePath(`/schedule/k/${token}`);
+  redirect(`/schedule/k/${token}?ok=note_saved`);
 }
 
 export async function captainRemoveDate(formData: FormData) {
