@@ -16,7 +16,11 @@ type ClubJoined = {
   venue_location: string | null;
   venue_map_link: string | null;
   secretary_note: string | null;
-  knocklyon_teams: { name: string; division: string | null } | null;
+  knocklyon_teams: {
+    name: string;
+    division: string | null;
+    captain_note: string | null;
+  } | null;
 };
 type Slot = { id: string; slot_date: string; capacity: number };
 type ProposedDate = { date: string; time: string | null };
@@ -94,7 +98,7 @@ export default async function SecretaryPage({
   const { data: club } = await supabase
     .from("clubs")
     .select(
-      "id, name, team_name, access_token, knocklyon_team_id, venue_location, venue_map_link, secretary_note, knocklyon_teams(name, division)"
+      "id, name, team_name, access_token, knocklyon_team_id, venue_location, venue_map_link, secretary_note, knocklyon_teams(name, division, captain_note)"
     )
     .eq("access_token", token)
     .single<ClubJoined>();
@@ -293,6 +297,14 @@ export default async function SecretaryPage({
           </div>
         ) : (
           <div className="space-y-6">
+            {club.knocklyon_teams?.captain_note && (
+              <div className="rounded border border-amber-200 bg-amber-50 text-amber-900 text-sm px-3 py-2 whitespace-pre-wrap">
+                <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">
+                  Note from {knocklyonLabel}&rsquo;s captain
+                </div>
+                {club.knocklyon_teams.captain_note}
+              </div>
+            )}
             <VenueForm
               token={token}
               location={club.venue_location}

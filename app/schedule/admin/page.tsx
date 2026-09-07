@@ -177,8 +177,13 @@ export default async function AdminPage({
       )}
 
       {/* ─── KNOCKLYON TEAMS ────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Knocklyon teams</h2>
+      <CollapsibleSection
+        title="Knocklyon teams"
+        count={teamsList.length}
+        countLabel="teams"
+        emptyHint="Add your Knocklyon teams"
+        openByDefault={teamsList.length === 0}
+      >
         <p className="text-sm text-zinc-600">
           Short name is used in tabs and internal emails. Display name
           (e.g. &ldquo;Men&rsquo;s 1&rdquo;) goes into the TinaCMS export.
@@ -291,7 +296,7 @@ export default async function AdminPage({
             ))}
           </ul>
         )}
-      </section>
+      </CollapsibleSection>
 
       {/* ─── TAB BAR ───────────────────────────────────────────────── */}
       {teamsList.length > 0 && (

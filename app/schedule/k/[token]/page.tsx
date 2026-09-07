@@ -119,7 +119,7 @@ export default async function CaptainPage({
         <p className="text-sm text-zinc-800">
           The season runs <strong>November through March</strong>. Please pick
           the <strong>Mondays</strong> your team is available to host. If you
-          need a Tuesday or Thursday slot, contact the club scheduler
+          need a Tuesday or Thursday slot, contact the match secretary
           separately.
         </p>
       </section>
@@ -282,7 +282,7 @@ function ErrorBanner({ code }: { code: string }) {
     invalid: "Something wasn't right with that request. Please try again.",
     missing_date: "Please pick a date.",
     day_not_hostable:
-      "Please pick a Monday between November and March. If you need a Tuesday or Thursday, contact the club scheduler.",
+      "Please pick a Monday between November and March. If you need a Tuesday or Thursday, contact the match secretary.",
     already_added: "That date is already in your list.",
     save_failed: "Something went wrong saving. Please try again.",
     has_booking:

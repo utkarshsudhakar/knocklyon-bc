@@ -297,7 +297,7 @@ export function captainInviteEmailHtml({
             The season runs <strong>November through March</strong>. Please pick the <strong>Mondays</strong> your team can host.
           </p>
           <p style="margin:0;font-family:${FONT_STACK};font-size:14px;line-height:1.55;color:${ZINC_700}">
-            Need a Tuesday or Thursday slot? Contact the club scheduler and we'll add it manually.
+            Need a Tuesday or Thursday slot? Contact the match secretary and we'll add it manually.
           </p>
         </td>
       </tr>
