@@ -304,6 +304,7 @@ export default async function AdminPage({
               <Link
                 key={t.id}
                 href={`/schedule/admin?team=${t.id}`}
+                scroll={false}
                 aria-current={active ? "page" : undefined}
                 className={`group flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm transition-all ${
                   active
