@@ -3,19 +3,19 @@ title: About Us
 hero_image: /images-(2).jpeg
 second_image: /high-angle-people-badminton-field_23-2149733006.avif
 second_body: ''
-hero_subtitle: 'More than twenty years of competitive badminton in South Dublin — built on high standards, genuine camaraderie, and a love of the game.'
+hero_subtitle: 'Over twenty years of competitive badminton in South Dublin. High standards, a tight group, and a real love of the game.'
 ---
 
-Knocklyon Badminton Club was founded with a simple goal — to give serious badminton players in South Dublin a club they could be proud of. Over the years we've grown into a well-established club competing across multiple grades in the Leinster Badminton leagues, with a reputation for developing strong players and fielding competitive teams.
+Knocklyon Badminton Club has been around for over twenty years. It started as a small group of players who wanted a proper competitive club in South Dublin, and it has grown into what we have today: several teams across the DDLC leagues, and busy club nights that keep people playing at a good standard week in, week out.
 
-We're based at Knocklyon Community Centre in Dublin 16, with training three nights a week. Our members range from seasoned league veterans to players stepping up to competitive badminton for the first time — but everyone who walks through our doors shares the same love of the game.
+We play out of Knocklyon Community Centre in Dublin 16, three nights a week. Our members are a mix of league veterans and newer players stepping into competitive badminton for the first time. What they have in common is showing up and putting the work in.
 
 ## What drives us
 
-We take our badminton seriously. Every season our teams compete hard across Men's, Ladies', and Mixed grades — and we've had our share of success along the way. But beyond the results, what keeps people coming back year after year is the standard of play on club nights, the camaraderie in the group, and the satisfaction of being part of a club that actually cares about the game.
+We take our badminton seriously. Every season our teams compete across Men's, Ladies', and Mixed grades, and we've had a fair share of wins over the years. But the real reason people stay, year after year, is what happens on club nights: strong play, close games, and a group that genuinely cares about the sport.
 
 ## The club today
 
-Today KBC fields multiple teams across the Leinster leagues, from Division 8 through to some of the higher grades. We train three nights a week at Knocklyon Community Centre — Mondays for team practice, and Tuesdays and Thursdays for club nights — and our members put in the effort to keep their game sharp throughout the season.
+KBC currently fields multiple teams across the DDLC leagues, from Division 8 up to the higher grades. Mondays are for team practice. Tuesdays and Thursdays are club nights. Our members put the work in across the season to keep their game sharp.
 
-If you're Division 7 or above and looking for a club where the standard is high and the welcome is genuine, we'd love to have you.
+If you're Division 7 or above and looking for a club with a high standard and a proper welcome, get in touch.

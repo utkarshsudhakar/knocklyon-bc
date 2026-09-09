@@ -28,7 +28,7 @@ function splitBodyAt(body: any, splitAt: string): [any, any] {
 const pillars = [
   {
     label: "Competition",
-    desc: "We compete seriously across Leinster leagues and cups. High standards are expected — and matched.",
+    desc: "We compete across the DDLC leagues and cups. Standards are high and we play to them.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M8 21h8M12 17v4M5 3h14l-1 8a6 6 0 0 1-12 0L5 3Z"/>
@@ -49,7 +49,7 @@ const pillars = [
   },
   {
     label: "The Standard",
-    desc: "From Division 8 to the higher grades. We train to improve and show up to win — every session, every match.",
+    desc: "From Division 8 up to the higher grades. We train hard and turn up ready to win.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -156,12 +156,12 @@ export default function AboutClient({ data, query, variables, teams = [] }: Prop
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-sm">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-forest-mid">
-              Leinster leagues
+              DDLC leagues
             </p>
             <h2 className="mt-1 text-2xl font-extrabold text-stone-900">Our teams</h2>
             <p className="mt-3 text-sm leading-relaxed text-stone-600">
-              We field teams across multiple grades every season. Whether you're looking to
-              step up a division or compete at a grade you know, there's a team for you.
+              We field teams across multiple grades every season. Whether you want to push
+              up a division or play at a grade you're comfortable at, there's a spot for you.
             </p>
             <Link
               href="/fixtures"
