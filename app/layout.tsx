@@ -44,13 +44,15 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white text-zinc-900">
-        <SiteHeader clubName={settings?.club_name} logo={settings?.logo} />
-        {settings?.announcement && (
-          <AnnouncementBar
-            text={settings.announcement}
-            link={settings.announcement_link ?? null}
-          />
-        )}
+        <div className="sticky top-0 z-40">
+          <SiteHeader clubName={settings?.club_name} logo={settings?.logo} />
+          {settings?.announcement && (
+            <AnnouncementBar
+              text={settings.announcement}
+              link={settings.announcement_link ?? null}
+            />
+          )}
+        </div>
         <div className="flex-1">{children}</div>
         <SiteFooter settings={settings} />
       </body>

@@ -22,7 +22,7 @@ export default function SiteHeader({ clubName, logo }: Props) {
   const isHome = pathname === "/";
 
   return (
-    <header className={`sticky top-0 z-40 overflow-visible backdrop-blur-sm ${
+    <header className={`overflow-visible backdrop-blur-sm ${
       isHome
         ? "border-b border-white/10 bg-[#065F46]/95"
         : "border-b border-stone-200 bg-[#fafaf7]/95"
