@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { getSupabase } from "../_lib/supabase";
+import { isAdmin } from "../_lib/admin-session";
 import {
   LoginForm,
   AddClubForm,
@@ -30,7 +30,6 @@ import SubmitButton from "../_lib/submit-button";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Scheduling admin — Knocklyon BC" };
 
-const COOKIE_NAME = "kbc_admin";
 const HOME_DEFAULT_TIME = "20:00";
 
 type KnocklyonTeam = {
@@ -122,10 +121,7 @@ export default async function AdminPage({
     reason?: string;
   }>;
 }) {
-  const store = await cookies();
-  const isAuthed = store.get(COOKIE_NAME)?.value === "1";
-
-  if (!isAuthed) return <LoginForm />;
+  if (!(await isAdmin())) return <LoginForm />;
 
   const params = await searchParams;
   const msg = params.msg;

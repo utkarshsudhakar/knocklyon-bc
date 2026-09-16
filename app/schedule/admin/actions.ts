@@ -1,10 +1,15 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getSupabase } from "../_lib/supabase";
+import {
+  createAdminSession,
+  destroyAdminSession,
+  isAdmin,
+} from "../_lib/admin-session";
 import {
   dateHasKnocklyonTeamMatch,
   maybeSendConfirmationEmail,
@@ -14,14 +19,6 @@ import {
   captainInviteEmailHtml,
 } from "../_lib/email-templates";
 import { capacityForDate } from "../_lib/config";
-
-const COOKIE_NAME = "kbc_admin";
-const COOKIE_MAX_AGE_SECS = 60 * 60 * 24 * 7;
-
-async function isAdmin(): Promise<boolean> {
-  const store = await cookies();
-  return store.get(COOKIE_NAME)?.value === "1";
-}
 
 async function requireAdmin() {
   if (!(await isAdmin())) {
@@ -59,21 +56,13 @@ export async function login(
     return { error: "Incorrect password." };
   }
 
-  const store = await cookies();
-  store.set(COOKIE_NAME, "1", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/schedule",
-    maxAge: COOKIE_MAX_AGE_SECS,
-  });
+  await createAdminSession();
 
   redirect("/schedule/admin");
 }
 
 export async function logout() {
-  const store = await cookies();
-  store.delete(COOKIE_NAME);
+  await destroyAdminSession();
   redirect("/schedule/admin");
 }
 
