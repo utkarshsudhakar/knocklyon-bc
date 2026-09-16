@@ -41,14 +41,29 @@ function nextMatch(fixtures: Fixture[]): Fixture | null {
   );
 }
 
+const MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
 function fmt(iso: string) {
   const d = new Date(iso);
   return {
-    weekday: d.toLocaleDateString("en-IE", { weekday: "short" }),
-    day: d.toLocaleDateString("en-IE", { day: "2-digit" }),
-    month: d.toLocaleDateString("en-IE", { month: "short" }),
-    time: d.toLocaleTimeString("en-IE", { hour: "2-digit", minute: "2-digit", hour12: false }),
+    weekday: WEEKDAYS_SHORT[d.getDay()],
+    day: pad2(d.getDate()),
+    month: MONTHS_SHORT[d.getMonth()],
+    time: `${pad2(d.getHours())}:${pad2(d.getMinutes())}`,
   };
+}
+
+function fmtArticleDate(iso: string) {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 export default function HomeClient({ data, query, variables, fixtures, latestNews, stats }: Props) {
@@ -326,7 +341,7 @@ export default function HomeClient({ data, query, variables, fixtures, latestNew
                     )}
                     <div className="absolute left-3 top-3 rounded-lg bg-black/55 px-2 py-0.5 backdrop-blur-sm">
                       <span className="text-[10px] font-semibold text-white">
-                        {new Date(article.date).toLocaleDateString("en-IE", { day: "numeric", month: "short", year: "numeric" })}
+                        {fmtArticleDate(article.date)}
                       </span>
                     </div>
                   </div>
