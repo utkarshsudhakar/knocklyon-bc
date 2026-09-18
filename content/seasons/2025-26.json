@@ -5,23 +5,43 @@
   "teams": [
     {
       "name": "Men's 1",
-      "league": "Division 4",
-      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+      "league": "Division 6",
+      "table_link": "https://bi.tournamentsoftware.com/league/AEE0CCA1-CF05-4CAF-AA0D-C6B75A33E50E/draw/29"
     },
     {
       "name": "Men's 2",
-      "league": "Division 5",
-      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+      "league": "Division 7",
+      "table_link": "https://bi.tournamentsoftware.com/league/AEE0CCA1-CF05-4CAF-AA0D-C6B75A33E50E/draw/31"
+    },
+    {
+      "name": "Men's 3",
+      "league": "Division 7",
+      "table_link": "https://bi.tournamentsoftware.com/league/AEE0CCA1-CF05-4CAF-AA0D-C6B75A33E50E/draw/34"
+    },
+    {
+      "name": "Men's 4",
+      "league": "Division 8",
+      "table_link": "https://bi.tournamentsoftware.com/league/AEE0CCA1-CF05-4CAF-AA0D-C6B75A33E50E/draw/45"
     },
     {
       "name": "Ladies' 1",
-      "league": "Division 6",
-      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+      "league": "Division 8",
+      "table_link": "https://bi.tournamentsoftware.com/league/B90FCE9F-D3B7-4F52-A027-4EBBE5BB6867/draw/18"
     },
     {
       "name": "Mixed 1",
       "league": "Division 6",
-      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/24"
+      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/19"
+    },
+    {
+      "name": "Mixed 2",
+      "league": "Division 7",
+      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/23"
+    },
+    {
+      "name": "Mixed 3",
+      "league": "Division 8",
+      "table_link": "https://bi.tournamentsoftware.com/league/1597A7DF-4826-4C99-AAC1-E8A29D72FEED/draw/29"
     }
   ]
 }

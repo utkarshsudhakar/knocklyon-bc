@@ -5,7 +5,7 @@
   "teams": [
     {
       "name": "Men's 1",
-      "league": "Division 4",
+      "league": "Division 5",
       "table_link": ""
     },
     {
@@ -14,14 +14,46 @@
       "table_link": ""
     },
     {
-      "name": "Ladies' 1",
+      "name": "Men's 3",
       "league": "Division 6",
       "table_link": ""
     },
     {
-      "name": "Mixed 1",
-      "league": "Division 6",
+      "name": "Men's 4",
+      "league": "Division 7",
       "table_link": ""
+    },
+    {
+      "name": "Men's 5",
+      "league": "Division 8"
+    },
+    {
+      "name": "Ladies' 1",
+      "league": "Division 6"
+    },
+    {
+      "name": "Ladies' 2",
+      "league": "Division 6"
+    },
+    {
+      "name": "Ladies' 3",
+      "league": "Division 7"
+    },
+    {
+      "name": "Ladies' 4",
+      "league": "Division 8"
+    },
+    {
+      "name": "Mixed 1",
+      "league": "Division 6"
+    },
+    {
+      "name": "Mixed 2",
+      "league": "Division 7"
+    },
+    {
+      "name": "Mixed 3",
+      "league": "Division 8"
     }
   ]
 }

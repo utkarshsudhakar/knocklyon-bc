@@ -16,6 +16,6 @@ We take our badminton seriously. Every season our teams compete across Men's, La
 
 ## The club today
 
-KBC currently fields multiple teams across the DDLC leagues, from Division 8 up to the higher grades. Mondays are for team practice. Tuesdays and Thursdays are club nights. Our members put the work in across the season to keep their game sharp.
+KBC currently fields multiple teams across the DDLC leagues, from Division 8 up to the higher grades. Mondays are for team practice and coaching. Tuesdays and Thursdays are club nights. Our members put the work in across the season to keep their game sharp.
 
 If you're Division 7 or above and looking for a club with a high standard and a proper welcome, get in touch.
