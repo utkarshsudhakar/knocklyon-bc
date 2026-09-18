@@ -78,6 +78,26 @@ function Img({ src, alt }: { src?: string | null; alt: string }) {
 const articleCls =
   "space-y-4 text-[17px] leading-relaxed text-stone-700 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-stone-900 [&_a]:text-forest [&_a]:underline [&_strong]:font-semibold [&_strong]:text-stone-900";
 
+const TEAM_GROUPS: { label: string; match: RegExp }[] = [
+  { label: "Men's", match: /^men'?s/i },
+  { label: "Ladies'", match: /^ladies?'?/i },
+  { label: "Mixed", match: /^mixed/i },
+];
+
+function groupTeams(teams: Team[]): { label: string; items: Team[] }[] {
+  const groups = TEAM_GROUPS.map(({ label, match }) => ({
+    label,
+    items: teams.filter((t) => match.test(t.name)),
+  })).filter((g) => g.items.length > 0);
+
+  const other = teams.filter(
+    (t) => !TEAM_GROUPS.some(({ match }) => match.test(t.name)),
+  );
+  if (other.length > 0) groups.push({ label: "Other", items: other });
+
+  return groups;
+}
+
 export default function AboutClient({ data, query, variables, teams = [] }: Props) {
   const { data: live } = useTina({ query, variables, data });
   const page = live.page;
@@ -153,8 +173,8 @@ export default function AboutClient({ data, query, variables, teams = [] }: Prop
 
       {/* ── Teams ─────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-6 py-12">
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
-          <div className="max-w-sm">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+          <div className="lg:max-w-sm">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-forest-mid">
               DDLC leagues
             </p>
@@ -171,34 +191,44 @@ export default function AboutClient({ data, query, variables, teams = [] }: Prop
             </Link>
           </div>
 
-          <div className="grid w-full gap-3 sm:max-w-sm">
-            {teams.length === 0 ? (
-              <p className="text-sm text-stone-400">
-                No teams added yet — add them in Site Settings.
-              </p>
-            ) : (
-              teams.map((t) => (
-                <div key={t.name} className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-5 py-3.5 shadow-sm">
-                  <div>
-                    <p className="font-bold text-stone-900">{t.name}</p>
-                    {t.league && (
-                      <p className="text-xs text-stone-500">{t.league}</p>
-                    )}
+          {teams.length === 0 ? (
+            <p className="text-sm text-stone-400">
+              No teams added yet — add them in Site Settings.
+            </p>
+          ) : (
+            <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-3 lg:max-w-2xl">
+              {groupTeams(teams).map(({ label, items }) => (
+                <div key={label}>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-500">
+                    {label}
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {items.map((t) => (
+                      <div
+                        key={t.name}
+                        className="rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-sm"
+                      >
+                        <p className="text-xs font-bold text-stone-900">{t.name}</p>
+                        {t.league && (
+                          <p className="mt-0.5 text-[11px] text-stone-500">{t.league}</p>
+                        )}
+                        {t.table_link && (
+                          <a
+                            href={t.table_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1.5 inline-block text-[10px] font-semibold text-forest hover:underline"
+                          >
+                            View Table →
+                          </a>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  {t.table_link && (
-                    <a
-                      href={t.table_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-4 shrink-0 rounded-full border border-forest px-3 py-1 text-[11px] font-semibold text-forest transition hover:bg-forest hover:text-white"
-                    >
-                      View Table →
-                    </a>
-                  )}
                 </div>
-              ))
-            )}
-          </div>
+            ))}
+            </div>
+          )}
         </div>
       </section>
 
