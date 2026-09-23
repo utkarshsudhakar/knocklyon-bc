@@ -33,10 +33,11 @@ export default async function Home() {
     areaServed: "South Dublin",
     address: {
       "@type": "PostalAddress",
+      name: "Knocklyon Community Centre",
       streetAddress: "Idrone Avenue",
       addressLocality: "Knocklyon",
       addressRegion: "Dublin",
-      postalCode: "D16 XT18",
+      postalCode: "D16XT18",
       addressCountry: "IE",
     },
     sameAs: [settings?.facebook_url, settings?.instagram_url].filter(Boolean),

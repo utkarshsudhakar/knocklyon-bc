@@ -46,7 +46,6 @@ export default function SiteFooter({ settings }: Props) {
             </div>
             <p className="mt-4 text-sm leading-relaxed text-stone-400">
               A competitive badminton club based in Knocklyon, South Dublin.
-              Division 7 and above welcome.
             </p>
           </div>
 
@@ -143,7 +142,7 @@ export default function SiteFooter({ settings }: Props) {
                 Sponsored by
               </p>
               <a
-                href="https://www.fiortech.com"
+                href="https://www.fiortech.eu"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Fíortech"

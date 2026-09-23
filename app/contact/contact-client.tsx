@@ -77,7 +77,7 @@ export default function ContactClient({ data, query, variables, settings }: Prop
               {/* Compact map — sits flush inside the card */}
               <div className="border-t border-stone-200">
                 <iframe
-                  src="https://maps.google.com/maps?q=Knocklyon+Community+Centre,+Knocklyon+Road,+Dublin+16,+Ireland&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                  src="https://maps.google.com/maps?q=Knocklyon+Community+Centre,+Idrone+Avenue,+Knocklyon,+D16XT18,+Ireland&t=&z=15&ie=UTF8&iwloc=&output=embed"
                   width="100%"
                   height="180"
                   className="block border-0"

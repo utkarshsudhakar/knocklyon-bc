@@ -246,7 +246,7 @@ export default function AboutClient({ data, query, variables, teams = [] }: Prop
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">We play at</p>
                 <p className="mt-0.5 text-base font-bold text-stone-900">Knocklyon Community Centre</p>
-                <p className="text-sm text-stone-500">Knocklyon Road, Dublin 16, D16 W973</p>
+                <p className="text-sm text-stone-500">Idrone Avenue, Knocklyon, D16XT18</p>
               </div>
             </div>
             <a
