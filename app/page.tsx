@@ -1,10 +1,21 @@
+import { headers } from "next/headers";
+
 import client from "@/tina/__generated__/client";
 import HomeClient from "./home-client";
+import IntroGate from "./components/intro-gate";
 import { SITE_URL } from "./site-url";
 
 export const dynamic = "force-dynamic";
 
+// Skip the intro overlay for anything that looks like a crawler so Googlebot
+// and friends always see the clean page (no interstitial, no LCP delay).
+const BOT_UA =
+  /bot|crawl|slurp|spider|mediapartners|adsbot|google|bing|yandex|baidu|duckduck|facebookexternalhit|whatsapp|telegrambot|linkedinbot|slackbot|twitterbot|pinterest|preview|lighthouse|pagespeed|gtmetrix|semrush|ahrefs/i;
+
 export default async function Home() {
+  const ua = (await headers()).get("user-agent") ?? "";
+  const introEnabled = !BOT_UA.test(ua);
+
   const [pageRes, fixturesRes, newsRes, settingsRes] = await Promise.all([
     client.queries.page({ relativePath: "home.md" }),
     client.queries.fixtureConnection({ first: 100 }),
@@ -49,6 +60,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <IntroGate enabled={introEnabled} />
       <HomeClient
         data={pageRes.data}
         query={pageRes.query}
