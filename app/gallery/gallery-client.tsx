@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTina } from "tinacms/dist/react";
 import PageHero from "../components/page-hero";
 
@@ -45,6 +45,31 @@ export default function GalleryClient({ data, query, variables }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // Track touch swipes so mobile users can flick left/right between photos.
+  // A horizontal drag over `SWIPE_THRESHOLD` px navigates; anything smaller
+  // is treated as a tap (and falls through to the normal click handlers).
+  const SWIPE_THRESHOLD = 50;
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const swiped = useRef(false);
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+    swiped.current = false;
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+    if (Math.abs(dx) < Math.abs(dy)) return; // mostly vertical → ignore
+    swiped.current = true;
+    if (dx < 0) next();
+    else prev();
+  }
 
   return (
     <>
@@ -118,14 +143,21 @@ export default function GalleryClient({ data, query, variables }: Props) {
       {active && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-4 backdrop-blur-sm"
-          onClick={close}
+          onClick={() => {
+            // Suppress the "tap outside closes" behaviour immediately after a
+            // horizontal swipe — the touchend fired a synthetic click too.
+            if (swiped.current) { swiped.current = false; return; }
+            close();
+          }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
           role="dialog"
           aria-modal="true"
         >
           {/* Close */}
           <button
             onClick={(e) => { e.stopPropagation(); close(); }}
-            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+            className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full border border-white/30 bg-black/60 text-white transition hover:bg-black/80"
             aria-label="Close"
           >
             <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -138,12 +170,12 @@ export default function GalleryClient({ data, query, variables }: Props) {
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); prev(); }}
-                className="absolute left-3 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-white/10 text-2xl text-white transition hover:bg-white/25"
+                className="absolute left-2 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/60 text-2xl text-white transition hover:bg-black/80 sm:left-4"
                 aria-label="Previous"
               >‹</button>
               <button
                 onClick={(e) => { e.stopPropagation(); next(); }}
-                className="absolute right-3 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-white/10 text-2xl text-white transition hover:bg-white/25"
+                className="absolute right-2 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/60 text-2xl text-white transition hover:bg-black/80 sm:right-4"
                 aria-label="Next"
               >›</button>
             </>
