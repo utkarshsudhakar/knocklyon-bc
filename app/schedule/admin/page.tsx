@@ -1,3 +1,4 @@
+import CourtBookings from "./court-bookings";
 import Link from "next/link";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -119,6 +120,7 @@ export default async function AdminPage({
     team?: string;
     team_name?: string;
     reason?: string;
+    courtPage?: string;
   }>;
 }) {
   if (!(await isAdmin())) return <LoginForm />;
@@ -171,6 +173,8 @@ export default async function AdminPage({
           reason={msgReason}
         />
       )}
+
+      <CourtBookings searchParams={params} />
 
       {/* ─── KNOCKLYON TEAMS ────────────────────────────────────────── */}
       <CollapsibleSection

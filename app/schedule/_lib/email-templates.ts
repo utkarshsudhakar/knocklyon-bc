@@ -478,3 +478,53 @@ export function confirmationEmailHtml({
     bodyInner: body,
   });
 }
+
+// Court booking emails share the same brand shell and captain footer.
+export function courtBookingEmailHtml({
+  captainName, teamLabel, link, booking,
+}: {
+  captainName: string | null;
+  teamLabel: string;
+  link: string;
+  booking?: { court: string; date: string; time: string };
+}): string {
+  const safeLink = escapeHtml(link);
+  const title = booking ? 'Your court booking is confirmed' : 'New court slots are available';
+  const details = booking
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${FOREST_TINT}" style="background-color:${FOREST_TINT};border-radius:8px;margin-bottom:24px"><tr><td style="padding:18px 20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${ZINC_700}"><strong>${escapeHtml(booking.court)}</strong><br>${escapeHtml(booking.date)}<br>${escapeHtml(booking.time)} &middot; Dublin time</td></tr></table>`
+    : p('New slots have been released for court booking. Open your personal link below to see all available dates, times and courts.');
+  return shell({
+    preheader: booking ? `Court booking confirmed for ${teamLabel}.` : `New court slots are ready to book for ${teamLabel}.`,
+    audience: 'captain',
+    bodyInner: `
+      ${kicker(booking ? 'Booking confirmed' : 'Court bookings')}
+      ${h1(title)}
+      ${p(captainName ? `Hi ${escapeHtml(captainName)},` : 'Hi Captain,')}
+      ${p(booking ? `Your court is reserved for <strong>${escapeHtml(teamLabel)}</strong>. Please share the details with your team.` : `Book a court for <strong>${escapeHtml(teamLabel)}</strong>.`)}
+      ${details}
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 24px"><tr><td>${button(booking ? 'Manage your booking' : 'Book a court', safeLink)}</td></tr></table>
+      ${p(booking ? 'You can cancel using your personal link any time before the slot starts.' : 'One booking per team per day. Slots close automatically when their start time is reached.')}
+      ${p('Keep your personal link private. If the button does not open, copy this link into your browser:', 6)}
+      <p style="margin:0 0 24px;font-family:${FONT_STACK};font-size:12px;line-height:1.5;word-break:break-all"><a href="${safeLink}" style="color:${FOREST}">${safeLink}</a></p>
+      ${p('Any questions, just reply to this email.')}
+      ${p('Thanks,<br><strong>Knocklyon Badminton Club</strong>')}
+    `,
+  });
+}
+
+export function courtBookingChangeEmailHtml({captainName,teamLabel,link,previous,updated}: {
+ captainName: string | null; teamLabel: string; link: string; previous: string; updated?: string;
+}): string {
+ const title=updated?'Your court booking has changed':'Your court booking has been cancelled';
+ const safeLink=escapeHtml(link);
+ return shell({preheader:title,audience:'captain',bodyInner:`
+ ${kicker('Court booking update')}${h1(title)}
+ ${p(captainName?`Hi ${escapeHtml(captainName)},`:'Hi Captain,')}
+ ${p(`An admin has ${updated?'updated':'cancelled'} the court booking for <strong>${escapeHtml(teamLabel)}</strong>.`)}
+ ${p(`<strong>${updated?'Previous booking':'Cancelled booking'}:</strong><br>${escapeHtml(previous)}`)}
+ ${updated?p(`<strong>Updated booking:</strong><br>${escapeHtml(updated)}<br>Your team’s reservation is still confirmed.`):p('Your reservation has been cancelled. You can check your personal link for other available slots.')}
+ <table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 24px"><tr><td>${button('View court bookings',safeLink)}</td></tr></table>
+ ${p('All times are Dublin time. Please share this update with your team. If you have any questions, reply to this email.')}
+ <p style="font-size:12px;word-break:break-all"><a href="${safeLink}" style="color:${FOREST}">${safeLink}</a></p>
+ ${p('Thanks,<br><strong>Knocklyon Badminton Club</strong>')}`});
+}
