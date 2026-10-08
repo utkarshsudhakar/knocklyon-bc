@@ -9,7 +9,7 @@ The new season is here and we're delighted to welcome everyone back to Knocklyon
 
 ## What's new this season
 
-This year we're fielding **twelve teams** across the Leinster leagues — our strongest representation yet. Training nights remain on **Mondays, Tuesdays, and Thursdays**, with the first official club night taking place this Tuesday.
+This year we're fielding **thirteen teams** across the Leinster leagues — our strongest representation yet. Training nights remain on **Mondays, Tuesdays, and Thursdays**, with the first official club night taking place this Tuesday.
 
 ## Fixtures
 
