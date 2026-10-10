@@ -22,7 +22,7 @@ import {
   deleteKnocklyonTeam,
   setMatchTime,
   sendCaptainInvite,
-  updateKnocklyonTeamCaptain,
+  updateKnocklyonTeam,
 } from "./actions";
 import DownloadJson from "./copy-json";
 import ResetSeasonForm from "./reset-season";
@@ -139,7 +139,9 @@ export default async function AdminPage({
     .from("knocklyon_teams")
     .select("*")
     .order("created_at");
-  const teamsList: KnocklyonTeam[] = teams ?? [];
+  const teamsList: KnocklyonTeam[] = [...(teams ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true })
+  );
   const selectedTeam = selectedTeamId
     ? teamsList.find((t) => t.id === selectedTeamId)
     : undefined;
@@ -216,7 +218,7 @@ export default async function AdminPage({
                       </div>
                     ) : (
                       <div className="text-xs text-amber-700 mt-0.5">
-                        No captain set — expand &ldquo;Edit captain&rdquo;
+                        No captain set — expand &ldquo;Edit team&rdquo;
                         below to add one.
                       </div>
                     )}
@@ -264,13 +266,32 @@ export default async function AdminPage({
                     >
                       <path d="M7 5l6 5-6 5V5z" />
                     </svg>
-                    Edit captain
+                    Edit team
                   </summary>
                   <form
-                    action={updateKnocklyonTeamCaptain}
+                    action={updateKnocklyonTeam}
                     className="mt-2 grid gap-2 sm:grid-cols-3"
                   >
                     <input type="hidden" name="team_id" value={t.id} />
+                    <input
+                      name="name"
+                      placeholder="Short name (e.g. M1)"
+                      defaultValue={t.name}
+                      required
+                      className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="display_name"
+                      placeholder="Display name (e.g. Men's 1)"
+                      defaultValue={t.display_name ?? ""}
+                      className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="division"
+                      placeholder="Division (e.g. Div 5)"
+                      defaultValue={t.division ?? ""}
+                      className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                    />
                     <input
                       name="captain_name"
                       placeholder="Captain name"
@@ -288,7 +309,7 @@ export default async function AdminPage({
                       type="submit"
                       className="rounded border border-forest bg-white text-forest text-sm font-medium hover:bg-forest hover:text-white px-4 py-2"
                     >
-                      Save captain
+                      Save team
                     </button>
                   </form>
                 </details>

@@ -111,14 +111,22 @@ export async function addKnocklyonTeam(
   return { ok: true };
 }
 
-export async function updateKnocklyonTeamCaptain(formData: FormData) {
+export async function updateKnocklyonTeam(formData: FormData) {
   await requireAdmin();
   const teamId = (formData.get("team_id") as string) ?? "";
+  const name = ((formData.get("name") as string) ?? "").trim();
+  const division =
+    ((formData.get("division") as string) ?? "").trim() || null;
+  const displayName =
+    ((formData.get("display_name") as string) ?? "").trim() || null;
   const captainName =
     ((formData.get("captain_name") as string) ?? "").trim() || null;
   const captainEmail =
     ((formData.get("captain_email") as string) ?? "").trim() || null;
-  if (!teamId) return;
+  if (!teamId || !name) return;
+  if (captainEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(captainEmail)) {
+    return;
+  }
 
   const supabase = getSupabase();
 
@@ -129,10 +137,16 @@ export async function updateKnocklyonTeamCaptain(formData: FormData) {
     .eq("id", teamId)
     .single();
   const patch: {
+    name: string;
+    division: string | null;
+    display_name: string | null;
     captain_name: string | null;
     captain_email: string | null;
     access_token?: string;
   } = {
+    name,
+    division,
+    display_name: displayName,
     captain_name: captainName,
     captain_email: captainEmail,
   };
