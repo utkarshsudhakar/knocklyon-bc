@@ -588,3 +588,26 @@ export function captainHomeDatesAddedEmailHtml({ teamLabel, division, captainNam
     `,
   });
 }
+
+export function secretaryFixtureUpdateEmailHtml({ kind, matchup, secretaryClub, rows, note }: {
+  kind: 'home_picked' | 'away_proposed'; matchup: string; secretaryClub: string;
+  rows: { label: string; value: string }[]; note?: string | null;
+}): string {
+  const picked = kind === 'home_picked';
+  const title = picked ? 'Home date picked' : 'Away dates offered';
+  const intro = picked
+    ? `<strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> has picked a home date for <strong>${escapeHtml(matchup)}</strong>.`
+    : `<strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> has offered away dates for <strong>${escapeHtml(matchup)}</strong>.`;
+  const table = rows.map(r => `<tr><td style="padding:10px 12px 10px 0;font-family:${FONT_STACK};font-size:13px;color:${ZINC_500};border-bottom:1px solid ${ZINC_100};white-space:nowrap">${escapeHtml(r.label)}</td><td style="padding:10px 0;font-family:${FONT_STACK};font-size:15px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${escapeHtml(r.value)}</strong></td></tr>`).join('');
+  return shell({
+    preheader: `${secretaryClub}: ${title.toLowerCase()} for ${matchup}.`,
+    audience: 'club',
+    bodyInner: `
+      ${kicker('Fixture scheduling')}
+      ${h1(title)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${FOREST_TINT}" style="background-color:${FOREST_TINT};border-radius:8px;border-left:4px solid ${FOREST};margin:0 0 24px"><tr><td style="padding:18px 20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${ZINC_700}">${intro}</td></tr></table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:${note ? 16 : 24}px;border-top:2px solid ${FOREST}">${table}</table>
+      ${note ? `<p style="margin:0 0 4px;font-family:${FONT_STACK};font-size:13px;font-weight:700;color:${ZINC_900}">Note from the secretary</p>${p(escapeHtml(note).replace(/\n/g, '<br>'))}` : ''}
+    `,
+  });
+}

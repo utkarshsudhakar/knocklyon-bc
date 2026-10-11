@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getSupabase } from "../../_lib/supabase";
 import {
   dateHasKnocklyonTeamMatch,
+  notifyClubAwayDatesProposed,
+  notifyClubHomeDatePicked,
   maybeSendConfirmationEmail,
 } from "../../_lib/notify";
 
@@ -77,6 +79,12 @@ export async function bookHomeDate(formData: FormData) {
       .eq("id", fixtureId);
   }
 
+  const { data: booked } = await supabase
+    .from("fixtures")
+    .select("match_time")
+    .eq("id", fixtureId)
+    .single();
+  await notifyClubHomeDatePicked(club.id, slotId, booked?.match_time ?? "20:00");
   await maybeSendConfirmationEmail(club.id);
 
   revalidatePath(`/schedule/c/${token}`);
@@ -150,6 +158,8 @@ export async function proposeAwayDates(formData: FormData) {
     .from("clubs")
     .update({ secretary_note: note })
     .eq("id", club.id);
+
+  await notifyClubAwayDatesProposed(club.id, proposed, note);
 
   revalidatePath(`/schedule/c/${token}`);
   redirect(`/schedule/c/${token}?ok=away_proposed`);

@@ -1,5 +1,5 @@
 import { getSupabase } from "./supabase";
-import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, formatDateLong } from "./email-templates";
+import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, secretaryFixtureUpdateEmailHtml, formatDateLong, formatTimeFriendly } from "./email-templates";
 import {
   generateIcs,
   googleCalendarLink,
@@ -229,5 +229,85 @@ export async function notifyClubHomeDatesAdded(team: {
     if (result.error) console.error("[Home dates email] Resend API error:", result.error);
   } catch (err) {
     console.error("[Home dates email] Resend threw:", err);
+  }
+}
+
+type ClubMatchup = {
+  name: string; team_name: string | null;
+  knocklyon_teams: { name: string; division: string | null } | null;
+};
+
+async function loadMatchup(clubId: string) {
+  const { data } = await getSupabase()
+    .from("clubs")
+    .select("name, team_name, knocklyon_teams(name, division)")
+    .eq("id", clubId)
+    .single<ClubMatchup>();
+  if (!data) return null;
+  const division = data.knocklyon_teams?.division;
+  return {
+    club: data.name,
+    matchup: `${knocklyonLabel(data.knocklyon_teams?.name ?? null)} vs ${opponentLabel(data.name, data.team_name)}${division ? ` (${division})` : ""}`,
+  };
+}
+
+async function sendClubEmail(subject: string, html: string, text: string): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  try {
+    const { Resend } = await import("resend");
+    const result = await new Resend(apiKey).emails.send({
+      from: process.env.CONTACT_FROM ?? "onboarding@resend.dev",
+      to: "info@knocklyonbc.ie",
+      subject, html, text,
+    });
+    if (result.error) console.error("[Club email] Resend API error:", result.error);
+  } catch (err) {
+    console.error("[Club email] Resend threw:", err);
+  }
+}
+
+/** Tell the club inbox that an opposing secretary picked one of our home dates. Never throws. */
+export async function notifyClubHomeDatePicked(clubId: string, slotId: string, time: string): Promise<void> {
+  try {
+    const [m, { data: slot }] = await Promise.all([
+      loadMatchup(clubId),
+      getSupabase().from("home_slots").select("slot_date").eq("id", slotId).single(),
+    ]);
+    if (!m || !slot) return;
+    const rows = [
+      { label: "Home date", value: formatDateLong(slot.slot_date) },
+      { label: "Match time", value: formatTimeFriendly(time) },
+    ];
+    await sendClubEmail(
+      `Home date picked: ${m.matchup}`,
+      secretaryFixtureUpdateEmailHtml({ kind: "home_picked", matchup: m.matchup, secretaryClub: m.club, rows }),
+      `${m.club} has picked a home date for ${m.matchup}.\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}`,
+    );
+  } catch (err) {
+    console.error("[Club email] home date picked failed:", err);
+  }
+}
+
+/** Tell the club inbox that an opposing secretary offered away dates. Never throws. */
+export async function notifyClubAwayDatesProposed(
+  clubId: string,
+  proposed: { date: string; time: string }[],
+  note: string | null,
+): Promise<void> {
+  try {
+    const m = await loadMatchup(clubId);
+    if (!m) return;
+    const rows = proposed.map((d, i) => ({
+      label: `Option ${i + 1}`,
+      value: `${formatDateLong(d.date)} at ${formatTimeFriendly(d.time)}`,
+    }));
+    await sendClubEmail(
+      `Away dates offered: ${m.matchup}`,
+      secretaryFixtureUpdateEmailHtml({ kind: "away_proposed", matchup: m.matchup, secretaryClub: m.club, rows, note }),
+      `${m.club} has offered away dates for ${m.matchup}.\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}${note ? `\n\nNote: ${note}` : ""}`,
+    );
+  } catch (err) {
+    console.error("[Club email] away dates proposed failed:", err);
   }
 }
