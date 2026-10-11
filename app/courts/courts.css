@@ -2,3 +2,4 @@
 .courts .notice-success{background:#edf4ec;border:1px solid #a7c9ac;color:#174e35}
 .courts .notice-error{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
 .courts .notice-warning{background:#fffbeb;border:1px solid #fcd34d;color:#92400e}
+.courts .cancel-booking button{background:#b91c1c}.courts .cancel-booking button:hover:not(:disabled){background:#991b1b}

@@ -64,9 +64,12 @@ function button(label: string, href: string): string {
   `;
 }
 
-type Audience = "secretary" | "captain";
+type Audience = "secretary" | "captain" | "club";
 
 function footerLine(audience: Audience): string {
+  if (audience === "club") {
+    return `This is an automatic notification from the Knocklyon court booking system.`;
+  }
   if (audience === "captain") {
     return `You&rsquo;re receiving this because you&rsquo;re marked as your team&rsquo;s captain in our records.<br>If that&rsquo;s not you, please let us know by replying to this email.`;
   }
@@ -527,4 +530,61 @@ export function courtBookingChangeEmailHtml({captainName,teamLabel,link,previous
  ${p('All times are Dublin time. Please share this update with your team. If you have any questions, reply to this email.')}
  <p style="font-size:12px;word-break:break-all"><a href="${safeLink}" style="color:${FOREST}">${safeLink}</a></p>
  ${p('Thanks,<br><strong>Knocklyon Badminton Club</strong>')}`});
+}
+
+export type CourtSlotStatus = { date: string; court: string; time: string; bookedBy?: string; highlight?: boolean };
+
+export function courtClubNotificationEmailHtml({ action, team, captain, details, slots }: {
+  action: 'booked' | 'cancelled'; team: string; captain: string; details: string; slots: CourtSlotStatus[];
+}): string {
+  const booked = action === 'booked';
+  const accent = booked ? FOREST : '#b91c1c';
+  const tint = booked ? FOREST_TINT : '#fef2f2';
+  const title = booked ? 'Court booked' : 'Court booking cancelled';
+  const badge = (label: string, bg: string, fg: string) => `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:${bg};color:${fg};font-size:12px;font-weight:700">${label}</span>`;
+  const groups = new Map<string, CourtSlotStatus[]>();
+  for (const slot of slots) groups.set(slot.date, [...(groups.get(slot.date) ?? []), slot]);
+  const bookedCount = slots.filter(x => x.bookedBy).length;
+  const table = [...groups].map(([date, rows]) => `
+      <tr><td colspan="3" style="padding:16px 0 6px;font-family:${FONT_STACK};font-size:13px;font-weight:700;color:${ZINC_900};border-bottom:2px solid ${FOREST}">${escapeHtml(date)}</td></tr>
+      ${rows.map(row => `<tr bgcolor="${row.highlight ? tint : WHITE}" style="background-color:${row.highlight ? tint : WHITE}">
+        <td style="padding:10px 8px 10px 0;font-family:${FONT_STACK};font-size:14px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${escapeHtml(row.court)}</strong></td>
+        <td style="padding:10px 8px;font-family:${FONT_STACK};font-size:14px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}">${escapeHtml(row.time)}</td>
+        <td align="right" style="padding:10px 0 10px 8px;font-family:${FONT_STACK};font-size:14px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}">${row.bookedBy ? badge(`Booked &middot; ${escapeHtml(row.bookedBy)}`, '#fef3c7', '#78350f') : badge('Available', FOREST_TINT, FOREST_DARK)}</td>
+      </tr>`).join('')}`).join('');
+  return shell({
+    preheader: `${team}: ${booked ? 'booked' : 'cancelled'} ${details}`,
+    audience: 'club',
+    bodyInner: `
+      ${kicker('Court bookings')}
+      ${h1(title)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${tint}" style="background-color:${tint};border-radius:8px;border-left:4px solid ${accent};margin:0 0 24px"><tr><td style="padding:18px 20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${ZINC_700}">
+        <strong style="color:${accent}">${escapeHtml(team)}</strong> (${escapeHtml(captain)}) ${booked ? 'booked' : 'cancelled their booking for'}<br>
+        <strong>${escapeHtml(details)}</strong><br><span style="font-size:13px;color:${ZINC_500}">Dublin time${booked ? '' : ' &middot; the slot is available again'}</span>
+      </td></tr></table>
+      <p style="margin:0 0 4px;font-family:${FONT_STACK};font-size:16px;font-weight:700;color:${ZINC_900}">Current slot status</p>
+      ${p(slots.length ? `${bookedCount} of ${slots.length} upcoming released slot${slots.length === 1 ? '' : 's'} booked.` : 'There are no upcoming released slots.', 4)}
+      ${slots.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">${table}</table>` : ''}
+    `,
+  });
+}
+
+export function captainHomeDatesAddedEmailHtml({ teamLabel, division, captainName, dates }: {
+  teamLabel: string; division: string | null; captainName: string | null; dates: string[];
+}): string {
+  const who = captainName ? escapeHtml(captainName) : 'The captain';
+  const list = dates.map(d => `<tr><td style="padding:10px 0;font-family:${FONT_STACK};font-size:15px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${escapeHtml(formatDateLong(d))}</strong></td></tr>`).join('');
+  return shell({
+    preheader: `${teamLabel} captain added ${dates.length} home date${dates.length === 1 ? '' : 's'}.`,
+    audience: 'club',
+    bodyInner: `
+      ${kicker('Home dates')}
+      ${h1('Home dates added')}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${FOREST_TINT}" style="background-color:${FOREST_TINT};border-radius:8px;border-left:4px solid ${FOREST};margin:0 0 24px"><tr><td style="padding:18px 20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${ZINC_700}">
+        ${who}, captain of <strong style="color:${FOREST}">${escapeHtml(teamLabel)}</strong>${division ? ` (${escapeHtml(division)})` : ''}, has added ${dates.length === 1 ? 'a home date' : `${dates.length} home dates`}.
+      </td></tr></table>
+      <p style="margin:0 0 4px;font-family:${FONT_STACK};font-size:16px;font-weight:700;color:${ZINC_900}">Dates added</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:2px solid ${FOREST}">${list}</table>
+    `,
+  });
 }

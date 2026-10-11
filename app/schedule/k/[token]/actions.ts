@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSupabase } from "../../_lib/supabase";
+import { notifyClubHomeDatesAdded } from "../../_lib/notify";
 import { capacityForDate, isCaptainAllowedDate } from "../../_lib/config";
 
 async function findTeamByToken(token: string) {
@@ -32,6 +33,7 @@ export async function captainAddDates(formData: FormData) {
 
   const supabase = getSupabase();
   let added = 0;
+  const addedDates: string[] = [];
   let skipped = 0;
 
   for (const dateStr of dates) {
@@ -74,7 +76,10 @@ export async function captainAddDates(formData: FormData) {
       continue;
     }
     added++;
+    addedDates.push(dateStr);
   }
+
+  await notifyClubHomeDatesAdded(team, addedDates);
 
   revalidatePath(`/schedule/k/${token}`);
   redirect(

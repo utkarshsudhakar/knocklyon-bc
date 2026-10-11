@@ -1,5 +1,5 @@
 import { getSupabase } from "./supabase";
-import { confirmationEmailHtml } from "./email-templates";
+import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, formatDateLong } from "./email-templates";
 import {
   generateIcs,
   googleCalendarLink,
@@ -204,5 +204,30 @@ export async function maybeSendConfirmationEmail(clubId: string): Promise<void> 
     );
   } catch (err) {
     console.error("[Confirmation email] Resend threw:", err);
+  }
+}
+
+/** Tell the club inbox that a captain added home dates. Never throws. */
+export async function notifyClubHomeDatesAdded(team: {
+  name: string; division: string | null; captain_name: string | null;
+}, dates: string[]): Promise<void> {
+  if (dates.length === 0) return;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const label = knocklyonLabel(team.name);
+  try {
+    const { Resend } = await import("resend");
+    const result = await new Resend(apiKey).emails.send({
+      from: process.env.CONTACT_FROM ?? "onboarding@resend.dev",
+      to: "info@knocklyonbc.ie",
+      subject: `Home dates added: ${label}`,
+      text: `${team.captain_name ?? "The captain"}, captain of ${label}, has added ${dates.length === 1 ? "a home date" : `${dates.length} home dates`}:\n\n${dates.map(formatDateLong).join("\n")}`,
+      html: captainHomeDatesAddedEmailHtml({
+        teamLabel: label, division: team.division, captainName: team.captain_name, dates,
+      }),
+    });
+    if (result.error) console.error("[Home dates email] Resend API error:", result.error);
+  } catch (err) {
+    console.error("[Home dates email] Resend threw:", err);
   }
 }

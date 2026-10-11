@@ -1,5 +1,5 @@
 'use server';
-import { courtBookingEmailHtml, courtBookingChangeEmailHtml } from '../schedule/_lib/email-templates';
+import { courtBookingEmailHtml, courtBookingChangeEmailHtml, courtClubNotificationEmailHtml, type CourtSlotStatus } from '../schedule/_lib/email-templates';
 import { revalidatePath } from 'next/cache';
 import { Resend } from 'resend';
 import { SITE_URL } from '../site-url';
@@ -13,6 +13,25 @@ async function send(to: string, subject: string, text: string, key: string, html
  if (!process.env.RESEND_API_KEY || !process.env.CONTACT_FROM) throw new Error('Email is not configured');
  const { error } = await new Resend(process.env.RESEND_API_KEY).emails.send({ from: process.env.CONTACT_FROM, to, subject, text, html }, { idempotencyKey: key });
  if (error) throw new Error('Email delivery failed');
+}
+const CLUB_EMAIL='info@knocklyonbc.ie';
+async function notifyClub(action: 'booked'|'cancelled', team: {name:string;captain_name:string|null}, slot: SlotSnapshot&{id?:string}, key: string) {
+ try {
+  const supabase=db();
+  const [slots,bookings,teams]=await Promise.all([
+   supabase.from('court_slots').select('id,court,starts_at,ends_at,court_releases!inner(closed)').is('deleted_at',null).not('published_at','is',null).gt('starts_at',new Date().toISOString()).order('starts_at').order('court'),
+   supabase.from('court_bookings').select('slot_id,team_id').is('cancelled_at',null),
+   supabase.from('knocklyon_teams').select('id,name'),
+  ]);
+  const list: CourtSlotStatus[]=(slots.data??[]).map(x=>{
+   const booking=(bookings.data??[]).find(y=>y.slot_id===x.id);
+   return {date:new Date(x.starts_at).toLocaleDateString('en-IE',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Dublin'}),court:x.court,time:`${timeLabel(x.starts_at)}–${timeLabel(x.ends_at)}`,bookedBy:booking?(teams.data??[]).find(t=>t.id===booking.team_id)?.name??'Team':undefined,highlight:x.id===slot.id};
+  });
+  const captain=team.captain_name||'captain', details=describeSlot(slot);
+  const verb=action==='booked'?'booked':'cancelled their booking for';
+  const text=`${team.name} (${captain}) ${verb} ${details} (Dublin time).\n\nCurrent slot status:\n${list.map(x=>`${x.date} · ${x.court} · ${x.time} · ${x.bookedBy?`Booked by ${x.bookedBy}`:'Available'}`).join('\n')||'No upcoming released slots.'}`;
+  await send(CLUB_EMAIL, action==='booked'?'Court booked':'Court booking cancelled', text, key, courtClubNotificationEmailHtml({action,team:team.name,captain,details,slots:list}));
+ } catch {}
 }
 async function sendPendingNotifications(): Promise<Result> {
  const supabase=db();
@@ -69,13 +88,20 @@ export async function book(_: Result, f: FormData): Promise<Result> {
  try {
   if (!t || !s) throw new Error();
   const day=new Date(s.starts_at).toLocaleDateString('en-CA',{timeZone:'Europe/Dublin'});
+  await notifyClub('booked', t, {...s,id:value(f,'slot')}, `court-club-book-${id}`);
   await send(t.captain_email, 'Court booking confirmed', `${t.name}: ${s.court}, ${day}, ${timeLabel(s.starts_at)}–${timeLabel(s.ends_at)} (Dublin time).\n\nManage your booking: ${SITE_URL}/courts/c/${token}`,`court-booking-${id}`,courtBookingEmailHtml({captainName:t.captain_name,teamLabel:t.name,link:`${SITE_URL}/courts/c/${token}`,booking:{court:s.court,date:day,time:`${timeLabel(s.starts_at)}–${timeLabel(s.ends_at)}`}}));
   return {status:'success',message:'Your court is booked. Confirmation email sent.'};
  } catch { return {status:'warning',message:'Your court is booked. The confirmation email could not be sent; your booking is shown below.'}; }
 }
 export async function cancel(_: Result, f: FormData): Promise<Result> {
- const {error}=await db().rpc('court_cancel',{p_token:value(f,'token'),p_booking:value(f,'booking')});
- refresh(); return message(error,'Booking cancelled. The slot is available again.');
+ const supabase=db(); const token=value(f,'token'),booking=value(f,'booking');
+ const {data:t}=await supabase.from('knocklyon_teams').select('id,name,captain_name').eq('access_token',token).maybeSingle();
+ const {data:b}=t?await supabase.from('court_bookings').select('slot_id').eq('id',booking).eq('team_id',t.id).is('cancelled_at',null).maybeSingle():{data:null};
+ const {data:s}=b?await supabase.from('court_slots').select('id,court,starts_at,ends_at').eq('id',b.slot_id).single():{data:null};
+ const {error}=await supabase.rpc('court_cancel',{p_token:token,p_booking:booking});
+ refresh();
+ if(!error && t && s) await notifyClub('cancelled', t, s, `court-club-cancel-${booking}`);
+ return message(error,'Booking cancelled. The slot is available again.');
 }
 
 export async function editSlot(_: Result, f: FormData): Promise<Result> {
