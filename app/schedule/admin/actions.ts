@@ -158,6 +158,30 @@ export async function updateKnocklyonTeam(formData: FormData) {
   revalidatePath("/schedule/admin");
 }
 
+export async function setSecretaryVisibleNote(formData: FormData) {
+  await requireAdmin();
+  const teamId = (formData.get("team_id") as string) ?? "";
+  if (!teamId) return;
+  const edited = ((formData.get("note") as string) ?? "").trim().slice(0, 2000);
+
+  const supabase = getSupabase();
+  const { data: team } = await supabase
+    .from("knocklyon_teams")
+    .select("captain_note")
+    .eq("id", teamId)
+    .single();
+  // Empty or unchanged text means "use the captain's own note".
+  const override =
+    edited && edited !== (team?.captain_note ?? "").trim() ? edited : null;
+
+  await supabase
+    .from("knocklyon_teams")
+    .update({ secretary_visible_note: override })
+    .eq("id", teamId);
+  revalidatePath("/schedule/admin");
+  revalidatePath("/schedule/c", "layout");
+}
+
 export async function setMatchTime(formData: FormData) {
   await requireAdmin();
   const fixtureId = (formData.get("fixture_id") as string) ?? "";

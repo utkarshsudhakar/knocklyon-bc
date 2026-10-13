@@ -23,6 +23,7 @@ import {
   setMatchTime,
   sendCaptainInvite,
   updateKnocklyonTeam,
+  setSecretaryVisibleNote,
 } from "./actions";
 import DownloadJson from "./copy-json";
 import ResetSeasonForm from "./reset-season";
@@ -43,6 +44,7 @@ type KnocklyonTeam = {
   access_token: string | null;
   invite_sent_at: string | null;
   captain_note: string | null;
+  secretary_visible_note?: string | null;
 };
 type Club = {
   id: string;
@@ -463,6 +465,36 @@ async function TeamPanel({
           </div>
           {team.captain_note}
         </div>
+      )}
+      {(team.captain_note || team.secretary_visible_note) && (
+        <form
+          action={setSecretaryVisibleNote}
+          className="rounded border border-zinc-200 px-3 py-3 space-y-2"
+        >
+          <input type="hidden" name="team_id" value={team.id} />
+          <label className="block text-sm font-semibold text-forest">
+            Note shown to opposing secretaries
+          </label>
+          <p className="text-xs text-zinc-500">
+            {team.secretary_visible_note
+              ? "You have edited this note. Secretaries see your version, not the captain’s."
+              : "Secretaries currently see the captain’s note as written. Edit it here to change what they see; the captain’s own note is not changed."}{" "}
+            Clear the box and save to go back to the captain’s note.
+          </p>
+          <textarea
+            name="note"
+            rows={4}
+            maxLength={2000}
+            defaultValue={team.secretary_visible_note ?? team.captain_note ?? ""}
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <SubmitButton
+            className="rounded bg-forest px-4 py-2 text-white text-sm font-medium hover:bg-forest-dark disabled:bg-forest/70"
+            pendingLabel="Saving…"
+          >
+            Save note for secretaries
+          </SubmitButton>
+        </form>
       )}
       {/* Setup accordions — start closed once populated */}
       <CollapsibleSection
