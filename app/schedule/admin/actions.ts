@@ -11,7 +11,7 @@ import {
   isAdmin,
 } from "../_lib/admin-session";
 import {
-  dateHasKnocklyonTeamMatch,
+  findKnocklyonTeamMatchConflict,
   maybeSendConfirmationEmail,
 } from "../_lib/notify";
 import {
@@ -432,9 +432,13 @@ export async function setAwayDate(formData: FormData) {
   if (!fixtureId || !date) return;
 
   const teamId = await knocklyonTeamIdForFixture(fixtureId);
-  if (await dateHasKnocklyonTeamMatch(teamId, date)) {
+  const conflict = await findKnocklyonTeamMatchConflict(teamId, date);
+  if (conflict) {
     redirect(
-      adminUrl(`msg=away_conflict&date=${encodeURIComponent(date)}`, teamId)
+      adminUrl(
+        `msg=away_conflict&date=${encodeURIComponent(date)}&team_name=${encodeURIComponent(conflict.name)}${conflict.linked ? "&reason=linked" : ""}`,
+        teamId
+      )
     );
   }
 
@@ -467,9 +471,13 @@ export async function acceptProposedDate(formData: FormData) {
   if (!fixtureId || !date) return;
 
   const teamId = await knocklyonTeamIdForFixture(fixtureId);
-  if (await dateHasKnocklyonTeamMatch(teamId, date)) {
+  const conflict = await findKnocklyonTeamMatchConflict(teamId, date);
+  if (conflict) {
     redirect(
-      adminUrl(`msg=away_conflict&date=${encodeURIComponent(date)}`, teamId)
+      adminUrl(
+        `msg=away_conflict&date=${encodeURIComponent(date)}&team_name=${encodeURIComponent(conflict.name)}${conflict.linked ? "&reason=linked" : ""}`,
+        teamId
+      )
     );
   }
 

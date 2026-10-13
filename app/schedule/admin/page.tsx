@@ -1159,8 +1159,12 @@ function MessageBanner({
         role="alert"
         className="rounded border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm"
       >
-        Can&rsquo;t confirm {d} &mdash; this Knocklyon team already has a
-        match scheduled that day.
+        Can&rsquo;t confirm {d} &mdash;{" "}
+        {reason === "linked" && teamLabel
+          ? `${teamLabel} shares players with this team and already has a match scheduled that day.`
+          : teamLabel
+            ? `${teamLabel} already has a match scheduled that day.`
+            : "this Knocklyon team already has a match scheduled that day."}
       </div>
     );
   }

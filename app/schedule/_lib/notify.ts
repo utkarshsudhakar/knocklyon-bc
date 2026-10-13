@@ -29,44 +29,68 @@ export async function linkedTeamIds(teamId: string | null): Promise<string[]> {
   return [teamId, ...(data ?? []).map((r) => r.team_b as string)];
 }
 
-export async function dateHasKnocklyonTeamMatch(
+export async function findKnocklyonTeamMatchConflict(
   teamId: string | null,
   date: string
-): Promise<boolean> {
-  if (!teamId || !date) return false;
+): Promise<{ teamId: string; name: string; linked: boolean } | null> {
+  if (!teamId || !date) return null;
   const supabase = getSupabase();
 
   const { data: clubs } = await supabase
     .from("clubs")
-    .select("id")
+    .select("id, knocklyon_team_id")
     .in("knocklyon_team_id", await linkedTeamIds(teamId));
-  const clubIds = (clubs ?? []).map((c) => c.id);
-  if (clubIds.length === 0) return false;
+  const teamByClub = new Map(
+    (clubs ?? []).map((c) => [c.id as string, c.knocklyon_team_id as string])
+  );
+  const clubIds = [...teamByClub.keys()];
+  if (clubIds.length === 0) return null;
+
+  async function describe(opponentClubId: string) {
+    const conflictTeamId = teamByClub.get(opponentClubId) ?? teamId!;
+    const { data: team } = await supabase
+      .from("knocklyon_teams")
+      .select("name")
+      .eq("id", conflictTeamId)
+      .single();
+    return {
+      teamId: conflictTeamId,
+      name: knocklyonLabel(team?.name ?? null),
+      linked: conflictTeamId !== teamId,
+    };
+  }
 
   const { data: awayHit } = await supabase
     .from("fixtures")
-    .select("id")
+    .select("opponent_club_id")
     .in("opponent_club_id", clubIds)
     .eq("confirmed_date", date)
     .eq("status", "confirmed")
     .limit(1);
-  if ((awayHit?.length ?? 0) > 0) return true;
+  if (awayHit?.length) return describe(awayHit[0].opponent_club_id);
 
   const { data: slot } = await supabase
     .from("home_slots")
     .select("id")
     .eq("slot_date", date)
     .maybeSingle();
-  if (!slot) return false;
+  if (!slot) return null;
 
   const { data: homeHit } = await supabase
     .from("fixtures")
-    .select("id")
+    .select("opponent_club_id")
     .in("opponent_club_id", clubIds)
     .eq("confirmed_slot_id", slot.id)
     .eq("status", "confirmed")
     .limit(1);
-  return (homeHit?.length ?? 0) > 0;
+  return homeHit?.length ? describe(homeHit[0].opponent_club_id) : null;
+}
+
+export async function dateHasKnocklyonTeamMatch(
+  teamId: string | null,
+  date: string
+): Promise<boolean> {
+  return (await findKnocklyonTeamMatchConflict(teamId, date)) !== null;
 }
 
 /**
