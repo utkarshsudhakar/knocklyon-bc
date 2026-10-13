@@ -402,6 +402,11 @@ export async function removeTeamSlot(formData: FormData) {
 
 // ── Fixture actions ────────────────────────────────────────────────────────
 
+/** Admin URL that keeps the selected team open. */
+function adminUrl(query: string, teamId?: string | null) {
+  return `/schedule/admin?${query}${teamId ? `&team=${encodeURIComponent(teamId)}` : ""}`;
+}
+
 export async function setAwayDate(formData: FormData) {
   await requireAdmin();
   const fixtureId = formData.get("fixture_id") as string;
@@ -412,7 +417,7 @@ export async function setAwayDate(formData: FormData) {
   const teamId = await knocklyonTeamIdForFixture(fixtureId);
   if (await dateHasKnocklyonTeamMatch(teamId, date)) {
     redirect(
-      `/schedule/admin?msg=away_conflict&date=${encodeURIComponent(date)}`
+      adminUrl(`msg=away_conflict&date=${encodeURIComponent(date)}`, teamId)
     );
   }
 
@@ -447,7 +452,7 @@ export async function acceptProposedDate(formData: FormData) {
   const teamId = await knocklyonTeamIdForFixture(fixtureId);
   if (await dateHasKnocklyonTeamMatch(teamId, date)) {
     redirect(
-      `/schedule/admin?msg=away_conflict&date=${encodeURIComponent(date)}`
+      adminUrl(`msg=away_conflict&date=${encodeURIComponent(date)}`, teamId)
     );
   }
 
@@ -523,7 +528,7 @@ export async function sendInvite(formData: FormData) {
   const { data: club } = await getSupabase()
     .from("clubs")
     .select(
-      "name, team_name, secretary_email, access_token, knocklyon_teams(name, division)"
+      "name, team_name, secretary_email, access_token, knocklyon_team_id, knocklyon_teams(name, division)"
     )
     .eq("id", clubId)
     .single<{
@@ -531,11 +536,12 @@ export async function sendInvite(formData: FormData) {
       team_name: string | null;
       secretary_email: string;
       access_token: string;
+      knocklyon_team_id: string | null;
       knocklyon_teams: { name: string; division: string | null } | null;
     }>();
 
   if (!club) {
-    redirect("/schedule/admin?msg=invite_failed&reason=club_not_found");
+    redirect(adminUrl("msg=invite_failed&reason=club_not_found"));
   }
 
   const siteUrl = await currentSiteUrl();
@@ -560,7 +566,10 @@ export async function sendInvite(formData: FormData) {
       { to: club.secretary_email, link, matchup }
     );
     redirect(
-      `/schedule/admin?msg=invite_logged&club=${encodeURIComponent(club.name)}`
+      adminUrl(
+        `msg=invite_logged&club=${encodeURIComponent(club.name)}`,
+        club.knocklyon_team_id
+      )
     );
   }
 
@@ -608,8 +617,8 @@ export async function sendInvite(formData: FormData) {
   const clubParam = encodeURIComponent(club.name);
   redirect(
     sent
-      ? `/schedule/admin?msg=invite_sent&club=${clubParam}`
-      : `/schedule/admin?msg=invite_failed&club=${clubParam}`
+      ? adminUrl(`msg=invite_sent&club=${clubParam}`, club.knocklyon_team_id)
+      : adminUrl(`msg=invite_failed&club=${clubParam}`, club.knocklyon_team_id)
   );
 }
 
@@ -666,13 +675,14 @@ export async function sendCaptainInvite(formData: FormData) {
     .single();
 
   if (!team) {
-    redirect("/schedule/admin?msg=captain_invite_failed&reason=no_team");
+    redirect(adminUrl("msg=captain_invite_failed&reason=no_team"));
   }
   if (!team.captain_email) {
     redirect(
-      `/schedule/admin?msg=captain_invite_failed&team_name=${encodeURIComponent(
-        team.name
-      )}&reason=no_email`
+      adminUrl(
+        `msg=captain_invite_failed&team_name=${encodeURIComponent(team.name)}&reason=no_email`,
+        team.id
+      )
     );
   }
 
@@ -701,9 +711,10 @@ export async function sendCaptainInvite(formData: FormData) {
       { to: team.captain_email, link, teamLabel }
     );
     redirect(
-      `/schedule/admin?msg=captain_invite_logged&team_name=${encodeURIComponent(
-        team.name
-      )}`
+      adminUrl(
+        `msg=captain_invite_logged&team_name=${encodeURIComponent(team.name)}`,
+        team.id
+      )
     );
   }
 
@@ -749,7 +760,7 @@ export async function sendCaptainInvite(formData: FormData) {
   const teamParam = encodeURIComponent(team.name);
   redirect(
     sent
-      ? `/schedule/admin?msg=captain_invite_sent&team_name=${teamParam}`
-      : `/schedule/admin?msg=captain_invite_failed&team_name=${teamParam}`
+      ? adminUrl(`msg=captain_invite_sent&team_name=${teamParam}`, team.id)
+      : adminUrl(`msg=captain_invite_failed&team_name=${teamParam}`, team.id)
   );
 }
