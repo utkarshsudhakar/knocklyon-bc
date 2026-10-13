@@ -370,7 +370,7 @@ export default async function AdminPage({
           fixtures.
         </p>
       ) : (
-        <TeamPanel team={selectedTeam} seasonFolder={seasonFolder} />
+        <TeamPanel key={selectedTeam.id} team={selectedTeam} seasonFolder={seasonFolder} />
       )}
 
       <div className="pt-8 mt-8 border-t border-zinc-200">
@@ -468,6 +468,7 @@ async function TeamPanel({
       )}
       {(team.captain_note || team.secretary_visible_note) && (
         <form
+          key={`secretary-note-${team.id}`}
           action={setSecretaryVisibleNote}
           className="rounded border border-zinc-200 px-3 py-3 space-y-2"
         >
@@ -482,6 +483,7 @@ async function TeamPanel({
             Clear the box and save to go back to the captain’s note.
           </p>
           <textarea
+            key={`${team.id}:${team.secretary_visible_note ?? ""}:${team.captain_note ?? ""}`}
             name="note"
             rows={4}
             maxLength={2000}
