@@ -3,6 +3,7 @@ import { getSupabase } from "../../_lib/supabase";
 import { proposeAwayDates, saveVenueDetails } from "./actions";
 import HomeCalendar from "./home-calendar";
 import SubmitButton from "../../_lib/submit-button";
+import { linkedTeamIds } from "../../_lib/notify";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Schedule your fixtures — Knocklyon BC" };
@@ -143,7 +144,7 @@ export default async function SecretaryPage({
     const { data: teamClubs } = await supabase
       .from("clubs")
       .select("id")
-      .eq("knocklyon_team_id", club.knocklyon_team_id);
+      .in("knocklyon_team_id", await linkedTeamIds(club.knocklyon_team_id));
     teamClubIds = new Set((teamClubs ?? []).map((c) => c.id));
   }
 

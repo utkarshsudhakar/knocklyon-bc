@@ -144,6 +144,15 @@ export default async function AdminPage({
   const teamsList: KnocklyonTeam[] = [...(teams ?? [])].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { numeric: true })
   );
+  const { data: conflictRows } = await supabase
+    .from("team_conflicts")
+    .select("team_a, team_b");
+  const linkedTo = (teamId: string) =>
+    new Set(
+      (conflictRows ?? [])
+        .filter((r) => r.team_a === teamId)
+        .map((r) => r.team_b as string)
+    );
   const selectedTeam = selectedTeamId
     ? teamsList.find((t) => t.id === selectedTeamId)
     : undefined;
@@ -307,6 +316,31 @@ export default async function AdminPage({
                       defaultValue={t.captain_email ?? ""}
                       className="rounded border border-zinc-300 px-3 py-2 text-sm"
                     />
+                    {teamsList.length > 1 && (
+                      <fieldset className="sm:col-span-3 rounded border border-zinc-200 px-3 py-2">
+                        <legend className="px-1 text-xs font-semibold text-zinc-600">
+                          Shares players with (no matches on the same date)
+                        </legend>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          {teamsList
+                            .filter((o) => o.id !== t.id)
+                            .map((o) => (
+                              <label
+                                key={o.id}
+                                className="flex items-center gap-1.5 text-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  name="linked_team"
+                                  value={o.id}
+                                  defaultChecked={linkedTo(t.id).has(o.id)}
+                                />
+                                {o.name}
+                              </label>
+                            ))}
+                        </div>
+                      </fieldset>
+                    )}
                     <button
                       type="submit"
                       className="rounded border border-forest bg-white text-forest text-sm font-medium hover:bg-forest hover:text-white px-4 py-2"

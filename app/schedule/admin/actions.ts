@@ -155,6 +155,23 @@ export async function updateKnocklyonTeam(formData: FormData) {
   }
 
   await supabase.from("knocklyon_teams").update(patch).eq("id", teamId);
+
+  // Teams sharing players: replace this team's links, stored both ways.
+  const linked = [
+    ...new Set(formData.getAll("linked_team").map(String)),
+  ].filter((id) => id && id !== teamId);
+  const { error: clearError } = await supabase
+    .from("team_conflicts")
+    .delete()
+    .or(`team_a.eq.${teamId},team_b.eq.${teamId}`);
+  if (!clearError && linked.length > 0) {
+    await supabase.from("team_conflicts").insert(
+      linked.flatMap((id) => [
+        { team_a: teamId, team_b: id },
+        { team_a: id, team_b: teamId },
+      ])
+    );
+  }
   revalidatePath("/schedule/admin");
 }
 

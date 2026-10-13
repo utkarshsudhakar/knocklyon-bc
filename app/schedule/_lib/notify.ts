@@ -15,9 +15,20 @@ function opponentLabel(clubName: string, teamName: string | null): string {
 }
 
 /**
- * Does the given Knocklyon team already have a confirmed match on that date?
+ * Does the given Knocklyon team, or a team sharing players with it, already
+ * have a confirmed match on that date?
  * Used to reject conflicting away-date proposals and manual admin overrides.
  */
+/** The team plus every team linked to it because they share players. */
+export async function linkedTeamIds(teamId: string | null): Promise<string[]> {
+  if (!teamId) return [];
+  const { data } = await getSupabase()
+    .from("team_conflicts")
+    .select("team_b")
+    .eq("team_a", teamId);
+  return [teamId, ...(data ?? []).map((r) => r.team_b as string)];
+}
+
 export async function dateHasKnocklyonTeamMatch(
   teamId: string | null,
   date: string
@@ -28,7 +39,7 @@ export async function dateHasKnocklyonTeamMatch(
   const { data: clubs } = await supabase
     .from("clubs")
     .select("id")
-    .eq("knocklyon_team_id", teamId);
+    .in("knocklyon_team_id", await linkedTeamIds(teamId));
   const clubIds = (clubs ?? []).map((c) => c.id);
   if (clubIds.length === 0) return false;
 
