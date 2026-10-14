@@ -6,6 +6,7 @@ import SiteHeader from "./components/site-header";
 import SiteFooter from "./components/site-footer";
 import AnnouncementBar from "./components/announcement-bar";
 import { SITE_URL } from "./site-url";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -94,6 +95,7 @@ export default async function RootLayout({
         </div>
         <div className="flex-1">{children}</div>
         <SiteFooter settings={settings} />
+        <Analytics />
       </body>
     </html>
   );
