@@ -62,7 +62,7 @@ export default async function CaptainPage({
   ]);
   const { data: offeredRaw } = await supabase
     .from("fixtures")
-    .select("id, proposed_dates, clubs!inner(name, team_name, knocklyon_team_id)")
+    .select("id, proposed_dates, clubs!inner(name, team_name, secretary_note, knocklyon_team_id)")
     .eq("is_knocklyon_home", false)
     .eq("status", "awaiting_date")
     .eq("clubs.knocklyon_team_id", team.id)
@@ -71,7 +71,7 @@ export default async function CaptainPage({
     (offeredRaw ?? []) as unknown as {
       id: string;
       proposed_dates: { date: string; time: string }[] | null;
-      clubs: { name: string; team_name: string | null };
+      clubs: { name: string; team_name: string | null; secretary_note: string | null };
     }[]
   ).filter((f) => (f.proposed_dates?.length ?? 0) > 0);
 
@@ -143,6 +143,16 @@ export default async function CaptainPage({
                 {f.clubs.name}
                 {f.clubs.team_name ? ` ${f.clubs.team_name}` : ""} (away)
               </div>
+              {f.clubs.secretary_note && (
+                <div className="rounded bg-zinc-50 border border-zinc-200 px-3 py-2 text-sm text-zinc-700">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Note from {f.clubs.name}
+                  </div>
+                  <p className="mt-0.5 whitespace-pre-line">
+                    {f.clubs.secretary_note}
+                  </p>
+                </div>
+              )}
               {(f.proposed_dates ?? []).map((d) => (
                 <form
                   key={d.date}

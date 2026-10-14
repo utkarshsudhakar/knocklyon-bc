@@ -161,7 +161,7 @@ export async function proposeAwayDates(formData: FormData) {
     .eq("id", club.id);
 
   await notifyClubAwayDatesProposed(club.id, proposed, note);
-  await notifyCaptainAwayDatesOffered(club.id, proposed);
+  await notifyCaptainAwayDatesOffered(club.id, proposed, note);
 
   revalidatePath(`/schedule/c/${token}`);
   redirect(`/schedule/c/${token}?ok=away_proposed`);

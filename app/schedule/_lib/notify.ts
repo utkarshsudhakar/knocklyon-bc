@@ -352,6 +352,7 @@ export async function notifyClubAwayDatesProposed(
 export async function notifyCaptainAwayDatesOffered(
   clubId: string,
   proposed: { date: string; time: string }[],
+  note: string | null = null,
 ): Promise<void> {
   try {
     const apiKey = process.env.RESEND_API_KEY;
@@ -377,8 +378,8 @@ export async function notifyCaptainAwayDatesOffered(
       from: process.env.CONTACT_FROM ?? "onboarding@resend.dev",
       to: team.captain_email,
       subject: `Please confirm your away match date: ${knocklyonLabel(team.name)} vs ${opponent}`,
-      html: captainDatesOfferedEmailHtml({ captainName: team.captain_name, teamLabel: knocklyonLabel(team.name), opponent, rows, link }),
-      text: `${opponent} has offered two dates for your away match:\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}\n\nConfirm one here: ${link}\n\nIf neither works, please contact your match secretary.`,
+      html: captainDatesOfferedEmailHtml({ captainName: team.captain_name, teamLabel: knocklyonLabel(team.name), opponent, rows, link, note }),
+      text: `${opponent} has offered two dates for your away match:\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}${note ? `\n\nNote from ${opponent}: ${note}` : ""}\n\nConfirm one here: ${link}\n\nIf neither works, please contact your match secretary.`,
     });
     if (result.error) console.error("[Captain dates email] Resend API error:", result.error);
   } catch (err) {
