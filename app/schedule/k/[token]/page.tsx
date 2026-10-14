@@ -78,7 +78,7 @@ export default async function CaptainPage({
   const { data: fixturesRaw } = await supabase
     .from("fixtures")
     .select(
-      "id, is_knocklyon_home, status, confirmed_date, match_time, proposed_dates, home_slots(slot_date), clubs!inner(name, team_name, venue_location, venue_map_link, competition, cup_round, knocklyon_team_id)"
+      "id, is_knocklyon_home, status, confirmed_date, match_time, proposed_dates, secretary_confirmed_at, home_slots(slot_date), clubs!inner(name, team_name, venue_location, venue_map_link, competition, cup_round, knocklyon_team_id)"
     )
     .eq("clubs.knocklyon_team_id", team.id)
     .neq("status", "cancelled");
@@ -96,6 +96,7 @@ export default async function CaptainPage({
       confirmed_date: string | null;
       match_time: string | null;
       proposed_dates: { date: string; time: string }[] | null;
+      secretary_confirmed_at?: string | null;
       home_slots: { slot_date: string } | null;
       clubs: {
         name: string;
@@ -121,12 +122,19 @@ export default async function CaptainPage({
         opponent: `${f.clubs.name}${f.clubs.team_name ? ` ${f.clubs.team_name}` : ""}`,
         cup: f.clubs.competition === "cup" ? (f.clubs.cup_round ?? "Cup") : null,
         clubName: f.clubs.name,
+        awaitingClub:
+          f.clubs.competition === "cup" &&
+          f.is_knocklyon_home &&
+          f.status === "confirmed" &&
+          !f.secretary_confirmed_at,
         date,
         time: f.match_time,
         venue: f.is_knocklyon_home ? knocklyonVenue : f.clubs.venue_location,
         map: f.is_knocklyon_home ? knocklyonMap : f.clubs.venue_map_link,
         waiting: f.is_knocklyon_home
-          ? `Waiting for ${f.clubs.name} to pick a date`
+          ? f.clubs.competition === "cup"
+            ? "Date to be set by Knocklyon"
+            : `Waiting for ${f.clubs.name} to pick a date`
           : offeredNow
             ? "Dates offered. Please confirm one above"
             : `Waiting for ${f.clubs.name} to offer dates`,
@@ -328,6 +336,11 @@ export default async function CaptainPage({
                           {formatDate(f.date)}
                           {f.time ? ` · ${formatTime(f.time)}` : ""}
                         </div>
+                        {f.awaitingClub && (
+                          <div className="text-amber-700 font-medium">
+                            Awaiting confirmation from {f.clubName}
+                          </div>
+                        )}
                         {f.venue && (
                           <div>
                             {f.venue}
