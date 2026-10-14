@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import {
   login,
   addClub,
+  addCupTie,
   addTeamSlot,
   addKnocklyonTeam,
   setTeamSlotTime,
@@ -144,6 +145,91 @@ export function AddClubForm({
       </button>
       {state.error && (
         <p className="sm:col-span-4 text-sm text-red-600">{state.error}</p>
+      )}
+    </form>
+  );
+}
+
+const CUP_ROUNDS = [
+  "Round 1",
+  "Round 2",
+  "Round 3",
+  "Quarter-final",
+  "Semi-final",
+  "Final",
+];
+
+export function AddCupTieForm({ teamId }: { teamId: string }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(
+    addCupTie,
+    {}
+  );
+  const field = "rounded border border-zinc-300 px-3 py-2 text-sm";
+  return (
+    <form
+      action={action}
+      className="grid gap-2 sm:grid-cols-6 rounded border border-zinc-200 bg-zinc-50 p-3"
+    >
+      <input type="hidden" name="knocklyon_team_id" value={teamId} />
+      <input
+        name="name"
+        placeholder="Opposing club"
+        required
+        className={`${field} sm:col-span-2`}
+      />
+      <input name="team_name" placeholder="Their team (e.g. A)" className={field} />
+      <input
+        name="email"
+        type="email"
+        placeholder="Secretary email"
+        required
+        className={`${field} sm:col-span-2`}
+      />
+      <select name="round" defaultValue="Round 1" className={field}>
+        {CUP_ROUNDS.map((r) => (
+          <option key={r}>{r}</option>
+        ))}
+      </select>
+      <div className="sm:col-span-6 flex flex-wrap items-center gap-5 text-sm">
+        <span className="font-medium text-zinc-700">We are playing:</span>
+        <label className="flex items-center gap-1.5">
+          <input type="radio" name="venue" value="home" defaultChecked /> Home
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input type="radio" name="venue" value="away" /> Away
+        </label>
+      </div>
+      <details className="sm:col-span-6 text-sm">
+        <summary className="cursor-pointer text-forest hover:underline">
+          Date already agreed? Enter it here
+        </summary>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input type="date" name="date" className={field} />
+          <input type="time" name="time" className={field} />
+          <span className="text-xs text-zinc-500">
+            Leave blank if the date is still to be arranged.
+          </span>
+        </div>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <input name="venue_location" placeholder="Away venue name (away ties only)" className={field} />
+          <input name="venue_map_link" type="url" placeholder="Google Maps link (optional)" className={field} />
+        </div>
+        <label className="mt-2 flex items-center gap-2 text-sm text-zinc-700">
+          <input type="checkbox" name="send_confirmation" />
+          Email the confirmation (with calendar file) to the secretary now
+        </label>
+      </details>
+      <div className="sm:col-span-6">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded bg-forest px-4 py-2 text-white text-sm font-medium hover:bg-forest-dark disabled:opacity-60"
+        >
+          {pending ? "Adding…" : "Add cup tie"}
+        </button>
+      </div>
+      {state.error && (
+        <p className="sm:col-span-6 text-sm text-red-600">{state.error}</p>
       )}
     </form>
   );

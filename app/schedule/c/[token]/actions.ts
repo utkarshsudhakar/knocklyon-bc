@@ -8,6 +8,7 @@ import {
   notifyClubAwayDatesProposed,
   notifyCaptainAwayDatesOffered,
   notifyClubHomeDatePicked,
+  notifyClubCupDateConfirmed,
   maybeSendConfirmationEmail,
 } from "../../_lib/notify";
 
@@ -203,4 +204,55 @@ export async function saveSecretaryNote(formData: FormData) {
 
   revalidatePath(`/schedule/c/${token}`);
   redirect(`/schedule/c/${token}?ok=note_saved`);
+}
+
+export async function confirmCupHomeDate(formData: FormData) {
+  const token = (formData.get("token") as string) ?? "";
+  const note = ((formData.get("note") as string) ?? "").trim() || null;
+  if (!token) redirect(`/schedule/c/${token}?err=invalid`);
+
+  const supabase = getSupabase();
+  const { data: club } = await supabase
+    .from("clubs")
+    .select("id, competition")
+    .eq("access_token", token)
+    .single();
+  if (!club || club.competition !== "cup") redirect(`/schedule/c/${token}?err=invalid`);
+
+  const { data: fixture } = await supabase
+    .from("fixtures")
+    .select("id, status, match_time, secretary_confirmed_at, home_slots:confirmed_slot_id(slot_date)")
+    .eq("opponent_club_id", club.id)
+    .eq("is_knocklyon_home", true)
+    .single<{
+      id: string;
+      status: string;
+      match_time: string | null;
+      secretary_confirmed_at: string | null;
+      home_slots: { slot_date: string } | null;
+    }>();
+  const date = fixture?.home_slots?.slot_date;
+  if (!fixture || fixture.status !== "confirmed" || !date) {
+    redirect(`/schedule/c/${token}?err=invalid`);
+  }
+  if (fixture.secretary_confirmed_at) {
+    redirect(`/schedule/c/${token}?err=already_confirmed`);
+  }
+
+  const { error } = await supabase
+    .from("fixtures")
+    .update({ secretary_confirmed_at: new Date().toISOString() })
+    .eq("id", fixture.id)
+    .is("secretary_confirmed_at", null);
+  if (error) {
+    console.error("[confirmCupHomeDate] update error:", error);
+    redirect(`/schedule/c/${token}?err=save_failed`);
+  }
+
+  await supabase.from("clubs").update({ secretary_note: note }).eq("id", club.id);
+  await notifyClubCupDateConfirmed(club.id, date, fixture.match_time, note);
+  await maybeSendConfirmationEmail(club.id);
+
+  revalidatePath(`/schedule/c/${token}`);
+  redirect(`/schedule/c/${token}?ok=cup_confirmed`);
 }

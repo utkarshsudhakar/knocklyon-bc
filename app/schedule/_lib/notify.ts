@@ -1,5 +1,5 @@
 import { getSupabase } from "./supabase";
-import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, secretaryFixtureUpdateEmailHtml, captainDatesOfferedEmailHtml, formatDateLong, formatTimeFriendly } from "./email-templates";
+import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, secretaryFixtureUpdateEmailHtml, captainDatesOfferedEmailHtml, cupConfirmationEmailHtml, formatDateLong, formatTimeFriendly } from "./email-templates";
 import { SITE_URL } from "../../site-url";
 import {
   generateIcs,
@@ -105,10 +105,12 @@ export async function maybeSendConfirmationEmail(clubId: string): Promise<void> 
   const { data: club } = await supabase
     .from("clubs")
     .select(
-      "name, team_name, secretary_email, confirmation_email_sent_at, knocklyon_team_id, venue_location, venue_map_link, knocklyon_teams(name, division)"
+      "name, team_name, secretary_email, confirmation_email_sent_at, knocklyon_team_id, venue_location, venue_map_link, competition, cup_round, knocklyon_teams(name, division)"
     )
     .eq("id", clubId)
     .single<{
+      competition: string | null;
+      cup_round: string | null;
       name: string;
       team_name: string | null;
       secretary_email: string;
@@ -124,9 +126,14 @@ export async function maybeSendConfirmationEmail(clubId: string): Promise<void> 
   const { data: fixtures } = await supabase
     .from("fixtures")
     .select(
-      "is_knocklyon_home, status, confirmed_date, confirmed_slot_id, match_time"
+      "is_knocklyon_home, status, confirmed_date, confirmed_slot_id, match_time, secretary_confirmed_at"
     )
     .eq("opponent_club_id", clubId);
+
+  if (club.competition === "cup") {
+    await sendCupConfirmationEmail(clubId, club, fixtures?.[0] ?? null);
+    return;
+  }
 
   if (!fixtures || fixtures.length < 2) return;
   if (!fixtures.every((f) => f.status === "confirmed")) return;
@@ -240,6 +247,76 @@ export async function maybeSendConfirmationEmail(clubId: string): Promise<void> 
     );
   } catch (err) {
     console.error("[Confirmation email] Resend threw:", err);
+  }
+}
+
+async function sendCupConfirmationEmail(
+  clubId: string,
+  club: {
+    name: string; team_name: string | null; secretary_email: string;
+    venue_location: string | null; venue_map_link: string | null; cup_round: string | null;
+    knocklyon_teams: { name: string; division: string | null } | null;
+  },
+  fixture: {
+    is_knocklyon_home: boolean; status: string; confirmed_date: string | null;
+    confirmed_slot_id: string | null; match_time: string | null; secretary_confirmed_at: string | null;
+  } | null,
+): Promise<void> {
+  if (!fixture || fixture.status !== "confirmed") return;
+  const isHome = fixture.is_knocklyon_home;
+  if (isHome && !fixture.secretary_confirmed_at) return;
+
+  let date = fixture.confirmed_date;
+  if (isHome && fixture.confirmed_slot_id) {
+    const { data: slot } = await getSupabase()
+      .from("home_slots").select("slot_date").eq("id", fixture.confirmed_slot_id).single();
+    date = slot?.slot_date ?? null;
+  }
+  if (!date) return;
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log("[Cup confirmation email: RESEND_API_KEY not set, would have emailed]", { to: club.secretary_email, date });
+    return;
+  }
+
+  const knocklyon = knocklyonLabel(club.knocklyon_teams?.name ?? null);
+  const opponent = opponentLabel(club.name, club.team_name);
+  const time = fixture.match_time ?? (isHome ? "20:00" : "19:00");
+  const venue = isHome ? (process.env.KNOCKLYON_LOCATION ?? "Knocklyon Community Centre") : (club.venue_location ?? "");
+  const mapLink = isHome ? (process.env.KNOCKLYON_MAP_LINK ?? "") : (club.venue_map_link ?? "");
+  const title = isHome ? `${knocklyon} vs ${opponent}` : `${opponent} vs ${knocklyon}`;
+  const roundText = club.cup_round ? ` ${club.cup_round}` : "";
+  const event: CalendarEvent = {
+    uid: `kbc-cup-${clubId}@knocklyonbc.ie`,
+    title, date, time, location: venue,
+    description: `Cup${roundText}: ${title}. ${isHome ? "Home" : "Away"} for Knocklyon.`,
+  };
+
+  try {
+    const { Resend } = await import("resend");
+    const result = await new Resend(apiKey).emails.send({
+      from: process.env.CONTACT_FROM ?? "onboarding@resend.dev",
+      to: club.secretary_email,
+      bcc: ["info@knocklyonbc.ie"],
+      subject: `Cup${roundText} confirmed: ${title}`,
+      html: cupConfirmationEmailHtml({
+        clubName: club.name, knocklyonLabel: knocklyon, opponentLabel: opponent,
+        round: club.cup_round, isHome, date, time, venue, mapLink,
+        googleCalLink: googleCalendarLink(event),
+      }),
+      attachments: [{
+        filename: "knocklyon-cup-match.ics",
+        content: Buffer.from(generateIcs([event], new Date())).toString("base64"),
+      }],
+    });
+    if (result.error) {
+      console.error("[Cup confirmation email] Resend API error:", result.error);
+      return;
+    }
+    await getSupabase().from("clubs").update({ confirmation_email_sent_at: new Date().toISOString() }).eq("id", clubId);
+  } catch (err) {
+    console.error("[Cup confirmation email] Resend threw:", err);
   }
 }
 
@@ -359,15 +436,16 @@ export async function notifyCaptainAwayDatesOffered(
     if (!apiKey) return;
     const { data: club } = await getSupabase()
       .from("clubs")
-      .select("name, team_name, knocklyon_teams(name, division, captain_name, captain_email, access_token)")
+      .select("name, team_name, competition, cup_round, knocklyon_teams(name, division, captain_name, captain_email, access_token)")
       .eq("id", clubId)
       .single<{
-        name: string; team_name: string | null;
+        name: string; team_name: string | null; competition: string | null; cup_round: string | null;
         knocklyon_teams: { name: string; division: string | null; captain_name: string | null; captain_email: string | null; access_token: string } | null;
       }>();
     const team = club?.knocklyon_teams;
     if (!club || !team?.captain_email) return;
     const opponent = opponentLabel(club.name, club.team_name);
+    const isCup = club.competition === "cup";
     const rows = proposed.map((d, i) => ({
       label: `Option ${i + 1}`,
       value: `${formatDateLong(d.date)} at ${formatTimeFriendly(d.time)}`,
@@ -377,9 +455,9 @@ export async function notifyCaptainAwayDatesOffered(
     const result = await new Resend(apiKey).emails.send({
       from: process.env.CONTACT_FROM ?? "onboarding@resend.dev",
       to: team.captain_email,
-      subject: `Please confirm your away match date: ${knocklyonLabel(team.name)} vs ${opponent}`,
-      html: captainDatesOfferedEmailHtml({ captainName: team.captain_name, teamLabel: knocklyonLabel(team.name), opponent, rows, link, note }),
-      text: `${opponent} has offered two dates for your away match:\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}${note ? `\n\nNote from ${opponent}: ${note}` : ""}\n\nConfirm one here: ${link}\n\nIf neither works, please contact your match secretary.`,
+      subject: `Please confirm your ${isCup ? `cup${club.cup_round ? ` ${club.cup_round}` : ""} ` : ""}away match date: ${knocklyonLabel(team.name)} vs ${opponent}`,
+      html: captainDatesOfferedEmailHtml({ captainName: team.captain_name, teamLabel: knocklyonLabel(team.name), opponent, rows, link, note, cupRound: isCup ? (club.cup_round ?? "") : undefined }),
+      text: `${opponent} has offered two dates for your${isCup ? " cup" : ""} away match:\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}${note ? `\n\nNote from ${opponent}: ${note}` : ""}\n\nConfirm one here: ${link}\n\nIf neither works, please contact your match secretary.`,
     });
     if (result.error) console.error("[Captain dates email] Resend API error:", result.error);
   } catch (err) {
@@ -403,5 +481,24 @@ export async function notifyClubCaptainConfirmed(clubId: string, date: string, t
     );
   } catch (err) {
     console.error("[Club email] captain confirmed failed:", err);
+  }
+}
+
+/** Tell the club inbox that an opposing secretary confirmed a cup home date. Never throws. */
+export async function notifyClubCupDateConfirmed(clubId: string, date: string, time: string | null, note: string | null): Promise<void> {
+  try {
+    const m = await loadMatchup(clubId);
+    if (!m) return;
+    const rows = [
+      { label: "Cup date", value: formatDateLong(date) },
+      { label: "Match time", value: formatTimeFriendly(time) },
+    ];
+    await sendClubEmail(
+      `Cup date confirmed: ${m.matchup}`,
+      secretaryFixtureUpdateEmailHtml({ kind: "cup_confirmed", matchup: m.matchup, secretaryClub: m.club, rows, note }),
+      `${m.club} has confirmed the cup date for ${m.matchup}.\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}${note ? `\n\nNote: ${note}` : ""}`,
+    );
+  } catch (err) {
+    console.error("[Club email] cup date confirmed failed:", err);
   }
 }

@@ -7,6 +7,7 @@ import { isAdmin } from "../_lib/admin-session";
 import {
   LoginForm,
   AddClubForm,
+  AddCupTieForm,
   AddTeamSlotForm,
   AddKnocklyonTeamForm,
   TeamSlotTimeEditor,
@@ -19,6 +20,7 @@ import {
   setAwayDate,
   resetFixture,
   sendInvite,
+  setCupHomeDate,
   acceptProposedDate,
   deleteKnocklyonTeam,
   setMatchTime,
@@ -58,6 +60,8 @@ type Club = {
   venue_map_link: string | null;
   secretary_note: string | null;
   invite_sent_at: string | null;
+  competition?: string | null;
+  cup_round?: string | null;
 };
 type Slot = { id: string; slot_date: string; capacity: number };
 type ProposedDate = { date: string; time: string | null };
@@ -70,6 +74,7 @@ type Fixture = {
   confirmed_date: string | null;
   match_time: string | null;
   proposed_dates: unknown;
+  secretary_confirmed_at?: string | null;
 };
 
 function parseProposed(raw: unknown): ProposedDate[] {
@@ -447,8 +452,11 @@ async function TeamPanel({
     supabase.from("fixtures").select("confirmed_slot_id, status"),
   ]);
 
-  const clubsList: Club[] = clubs ?? [];
-  const clubById = new Map(clubsList.map((c) => [c.id, c]));
+  const allClubs: Club[] = clubs ?? [];
+  const clubById = new Map(allClubs.map((c) => [c.id, c]));
+  const isCupClub = (c: Club | undefined) => c?.competition === "cup";
+  const clubsList = allClubs.filter((c) => !isCupClub(c));
+  const cupClubs = allClubs.filter((c) => isCupClub(c));
 
   type TeamSlotJoined = {
     match_time: string | null;
@@ -465,6 +473,16 @@ async function TeamPanel({
     .sort((a, b) => a.slot.slot_date.localeCompare(b.slot.slot_date));
   const teamSlots: Slot[] = teamSlotEntries.map((e) => e.slot);
   const slotById = new Map(teamSlots.map((s) => [s.id, s]));
+  const missingSlotIds = (fixtures ?? [])
+    .map((f) => f.confirmed_slot_id as string | null)
+    .filter((id): id is string => Boolean(id) && !slotById.has(id as string));
+  if (missingSlotIds.length > 0) {
+    const { data: extraSlots } = await supabase
+      .from("home_slots")
+      .select("id, slot_date, capacity")
+      .in("id", missingSlotIds);
+    for (const s of (extraSlots ?? []) as Slot[]) slotById.set(s.id, s);
+  }
 
   const bookingsPerSlot = new Map<string, number>();
   for (const f of allBookings ?? []) {
@@ -485,9 +503,19 @@ async function TeamPanel({
     confirmed_date: f.confirmed_date,
     match_time: f.match_time,
     proposed_dates: f.proposed_dates,
+    secretary_confirmed_at: f.secretary_confirmed_at ?? null,
   }));
 
-  const confirmedCount = fixturesList.filter(
+  const leagueFixtures = fixturesList.filter(
+    (f) => !isCupClub(clubById.get(f.opponent_club_id))
+  );
+  const cupFixtures = fixturesList.filter((f) =>
+    isCupClub(clubById.get(f.opponent_club_id))
+  );
+  const confirmedCount = leagueFixtures.filter(
+    (f) => f.status === "confirmed"
+  ).length;
+  const cupConfirmedCount = cupFixtures.filter(
     (f) => f.status === "confirmed"
   ).length;
 
@@ -627,27 +655,89 @@ async function TeamPanel({
         )}
       </CollapsibleSection>
 
+      <CollapsibleSection
+        title="Cup ties"
+        count={cupClubs.length}
+        countLabel="ties"
+        emptyHint="Add this team's cup matches"
+        openByDefault={cupClubs.length === 0}
+      >
+        <p className="text-sm text-zinc-600">
+          Add one entry per cup round. DDLC decides home or away, so just record
+          it here. Each cup tie is a single match.
+        </p>
+        <AddCupTieForm teamId={team.id} />
+        {cupClubs.length === 0 ? (
+          <p className="text-sm text-zinc-500 italic">No cup ties added yet.</p>
+        ) : (
+          <ul className="divide-y divide-zinc-200 border border-zinc-200 rounded">
+            {cupClubs.map((c) => (
+              <ClubRow
+                key={c.id}
+                club={c}
+                cupHome={
+                  fixturesList.find((f) => f.opponent_club_id === c.id)
+                    ?.is_knocklyon_home
+                }
+                cupFixture={fixturesList.find(
+                  (f) => f.opponent_club_id === c.id
+                )}
+                slotById={slotById}
+              />
+            ))}
+          </ul>
+        )}
+      </CollapsibleSection>
+
       {/* Fixtures — main content, always expanded */}
-      <section className="space-y-4 pt-2">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">Fixtures</h2>
-          {fixturesList.length > 0 && (
-            <span className="text-sm text-zinc-500">
-              {confirmedCount} of {fixturesList.length} confirmed
-            </span>
+      <section className="space-y-6 pt-2">
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">
+              <span className="mr-2 rounded-full bg-forest text-white text-xs px-2 py-0.5 align-middle">
+                League
+              </span>
+              Fixtures
+            </h2>
+            {leagueFixtures.length > 0 && (
+              <span className="text-sm text-zinc-500">
+                {confirmedCount} of {leagueFixtures.length} confirmed
+              </span>
+            )}
+          </div>
+          {leagueFixtures.length === 0 ? (
+            <p className="text-sm text-zinc-500 italic">
+              Add opposing clubs above to generate fixtures.
+            </p>
+          ) : (
+            <FixtureTable
+              fixtures={leagueFixtures}
+              clubById={clubById}
+              slotById={slotById}
+              team={team}
+            />
           )}
         </div>
-        {fixturesList.length === 0 ? (
-          <p className="text-sm text-zinc-500 italic">
-            Add opposing clubs above to generate fixtures.
-          </p>
-        ) : (
-          <FixtureTable
-            fixtures={fixturesList}
-            clubById={clubById}
-            slotById={slotById}
-            team={team}
-          />
+        {cupFixtures.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold">
+                <span className="mr-2 rounded-full bg-purple-600 text-white text-xs px-2 py-0.5 align-middle">
+                  Cup
+                </span>
+                Fixtures
+              </h2>
+              <span className="text-sm text-zinc-500">
+                {cupConfirmedCount} of {cupFixtures.length} confirmed
+              </span>
+            </div>
+            <FixtureTable
+              fixtures={cupFixtures}
+              clubById={clubById}
+              slotById={slotById}
+              team={team}
+            />
+          </div>
         )}
       </section>
 
@@ -661,7 +751,7 @@ async function TeamPanel({
         >
           <ExportPanel
             team={team}
-            fixtures={fixturesList}
+            fixtures={leagueFixtures}
             clubById={clubById}
             slotById={slotById}
             seasonFolder={seasonFolder}
@@ -726,7 +816,21 @@ function CollapsibleSection({
   );
 }
 
-function ClubRow({ club }: { club: Club }) {
+function ClubRow({
+  club,
+  cupHome,
+  cupFixture,
+  slotById,
+}: {
+  club: Club;
+  cupHome?: boolean;
+  cupFixture?: Fixture;
+  slotById?: Map<string, Slot>;
+}) {
+  const isCup = club.competition === "cup";
+  const cupDate = cupFixture?.confirmed_slot_id
+    ? (slotById?.get(cupFixture.confirmed_slot_id)?.slot_date ?? null)
+    : (cupFixture?.confirmed_date ?? null);
   return (
     <li className="p-3 space-y-2">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -735,6 +839,20 @@ function ClubRow({ club }: { club: Club }) {
             {club.name}
             {club.team_name && (
               <span className="ml-1 text-zinc-500">{club.team_name}</span>
+            )}
+            {isCup && (
+              <>
+                <span className="ml-2 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5">
+                  Cup{club.cup_round ? ` · ${club.cup_round}` : ""}
+                </span>
+                {cupHome !== undefined && (
+                  <span
+                    className={`ml-2 rounded-full text-xs font-semibold px-2 py-0.5 ${cupHome ? "bg-forest text-white" : "bg-zinc-200 text-zinc-700"}`}
+                  >
+                    {cupHome ? "Home" : "Away"}
+                  </span>
+                )}
+              </>
             )}
           </div>
           <div className="text-sm text-zinc-500">{club.secretary_email}</div>
@@ -756,9 +874,56 @@ function ClubRow({ club }: { club: Club }) {
               )}
             </div>
           )}
-          <div className="text-xs text-zinc-400 mt-1 font-mono truncate">
-            /schedule/c/{club.access_token}
-          </div>
+          {isCup && !cupHome && cupDate && (
+            <div className="mt-2 text-xs">
+              <span className="font-medium text-zinc-800">
+                {formatDate(cupDate)}
+                {cupFixture?.match_time ? ` at ${cupFixture.match_time.slice(0, 5)}` : ""}
+              </span>{" "}
+              <span className="text-forest font-semibold">Confirmed</span>
+            </div>
+          )}
+          {isCup && cupHome && (
+            <div className="mt-2 space-y-1">
+              {cupDate && (
+                <div className="text-xs">
+                  <span className="font-medium text-zinc-800">
+                    {formatDate(cupDate)}
+                    {cupFixture?.match_time ? ` at ${cupFixture.match_time.slice(0, 5)}` : ""}
+                  </span>{" "}
+                  {cupFixture?.secretary_confirmed_at ? (
+                    <span className="text-forest font-semibold">Confirmed by secretary</span>
+                  ) : (
+                    <span className="text-amber-700 font-semibold">Awaiting secretary confirmation</span>
+                  )}
+                </div>
+              )}
+              <form action={setCupHomeDate} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="id" value={club.id} />
+                <input
+                  type="date"
+                  name="date"
+                  required
+                  defaultValue={cupDate ?? ""}
+                  className="rounded border border-zinc-300 px-2 py-1 text-xs"
+                />
+                <input
+                  type="time"
+                  name="time"
+                  defaultValue={cupFixture?.match_time?.slice(0, 5) ?? "20:00"}
+                  className="rounded border border-zinc-300 px-2 py-1 text-xs"
+                />
+                <SubmitButton className="text-xs text-forest hover:underline" pendingLabel="Saving…">
+                  {cupDate ? "Change date" : "Set date"}
+                </SubmitButton>
+              </form>
+            </div>
+          )}
+          {!isCup && (
+            <div className="text-xs text-zinc-400 mt-1 font-mono truncate">
+              /schedule/c/{club.access_token}
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <div className="flex items-center gap-4">
@@ -793,7 +958,7 @@ function ClubRow({ club }: { club: Club }) {
           Edit club details
         </summary>
         <form
-          key={`${club.id}:${club.name}:${club.team_name ?? ""}:${club.secretary_email}`}
+          key={`${club.id}:${club.name}:${club.team_name ?? ""}:${club.secretary_email}:${club.venue_location ?? ""}:${club.venue_map_link ?? ""}`}
           action={updateClub}
           className="mt-2 grid gap-2 sm:grid-cols-3"
         >
@@ -819,6 +984,23 @@ function ClubRow({ club }: { club: Club }) {
             required
             className="rounded border border-zinc-300 px-3 py-2 text-sm"
           />
+          {isCup && cupHome === false && (
+            <>
+              <input
+                name="venue_location"
+                placeholder="Away venue name"
+                defaultValue={club.venue_location ?? ""}
+                className="rounded border border-zinc-300 px-3 py-2 text-sm sm:col-span-1"
+              />
+              <input
+                name="venue_map_link"
+                type="url"
+                placeholder="Google Maps link"
+                defaultValue={club.venue_map_link ?? ""}
+                className="rounded border border-zinc-300 px-3 py-2 text-sm sm:col-span-2"
+              />
+            </>
+          )}
           <button
             type="submit"
             className="rounded border border-forest bg-white text-forest text-sm font-medium hover:bg-forest hover:text-white px-4 py-2 sm:col-span-3 sm:w-fit"
@@ -888,7 +1070,14 @@ function FixtureTable({
             const proposed = parseProposed(f.proposed_dates);
             return (
               <tr key={f.id} className="border-t border-zinc-200 align-top">
-                <td className="p-2 font-medium">{label}</td>
+                <td className="p-2 font-medium">
+                  {label}
+                  {opponent?.competition === "cup" && (
+                    <span className="ml-2 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5">
+                      Cup{opponent.cup_round ? ` · ${opponent.cup_round}` : ""}
+                    </span>
+                  )}
+                </td>
                 <td className="p-2">
                   <StatusPill status={f.status} />
                 </td>
@@ -1209,6 +1398,20 @@ function MessageBanner({
           : teamLabel
             ? `${teamLabel} already has a match scheduled that day.`
             : "this Knocklyon team already has a match scheduled that day."}
+      </div>
+    );
+  }
+  if (code === "cup_date_day" || code === "cup_date_full" || code === "cup_date_clash" || code === "cup_date_failed") {
+    const d = date ? formatDate(decodeURIComponent(date)) : "that date";
+    const why: Record<string, string> = {
+      cup_date_day: "Knocklyon can't host on that day of the week (Mon/Tue/Thu only).",
+      cup_date_full: "the venue is already full that day.",
+      cup_date_clash: "this team, or a team sharing players with it, already has a match that day.",
+      cup_date_failed: "something went wrong. Please try again.",
+    };
+    return (
+      <div role="alert" className="rounded border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+        Can&rsquo;t set {d} &mdash; {why[code]}
       </div>
     );
   }

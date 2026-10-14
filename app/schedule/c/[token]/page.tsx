@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getSupabase } from "../../_lib/supabase";
-import { proposeAwayDates, saveVenueDetails } from "./actions";
+import { proposeAwayDates, saveVenueDetails, confirmCupHomeDate } from "./actions";
 import HomeCalendar from "./home-calendar";
 import SubmitButton from "../../_lib/submit-button";
 import { linkedTeamIds } from "../../_lib/notify";
@@ -17,6 +17,8 @@ type ClubJoined = {
   venue_location: string | null;
   venue_map_link: string | null;
   secretary_note: string | null;
+  competition: string | null;
+  cup_round: string | null;
   knocklyon_teams: {
     name: string;
     division: string | null;
@@ -35,6 +37,7 @@ type Fixture = {
   confirmed_date: string | null;
   match_time: string | null;
   proposed_dates: unknown;
+  secretary_confirmed_at?: string | null;
 };
 
 // Common badminton start times — noon to 10pm in 30-min steps
@@ -100,7 +103,7 @@ export default async function SecretaryPage({
   const { data: club } = await supabase
     .from("clubs")
     .select(
-      "id, name, team_name, access_token, knocklyon_team_id, venue_location, venue_map_link, secretary_note, knocklyon_teams(name, division, captain_note, secretary_visible_note)"
+      "id, name, team_name, access_token, knocklyon_team_id, venue_location, venue_map_link, secretary_note, competition, cup_round, knocklyon_teams(name, division, captain_note, secretary_visible_note)"
     )
     .eq("access_token", token)
     .single<ClubJoined>();
@@ -178,6 +181,30 @@ export default async function SecretaryPage({
       is_available: capacityLeft && !teamAlreadyHome && !teamAlreadyAway,
     };
   });
+
+  if (club.competition === "cup") {
+    const cupFixture = fixtures[0] ?? null;
+    let cupHomeDate: string | null = null;
+    if (cupFixture?.is_knocklyon_home && cupFixture.confirmed_slot_id) {
+      const { data: slot } = await supabase
+        .from("home_slots")
+        .select("slot_date")
+        .eq("id", cupFixture.confirmed_slot_id)
+        .single();
+      cupHomeDate = slot?.slot_date ?? null;
+    }
+    return (
+      <CupView
+        club={club}
+        token={token}
+        fixture={cupFixture}
+        homeDate={cupHomeDate}
+        err={err}
+        ok={ok}
+        conflictDates={conflictDates}
+      />
+    );
+  }
 
   const homeFixture = fixtures.find((f) => f.is_knocklyon_home);
   const awayFixture = fixtures.find((f) => !f.is_knocklyon_home);
@@ -320,6 +347,160 @@ export default async function SecretaryPage({
           </div>
         )}
       </StepCard>
+    </main>
+  );
+}
+
+function CupView({
+  club,
+  token,
+  fixture,
+  homeDate,
+  err,
+  ok,
+  conflictDates,
+}: {
+  club: ClubJoined;
+  token: string;
+  fixture: Fixture | null;
+  homeDate: string | null;
+  err?: string;
+  ok?: string;
+  conflictDates?: string;
+}) {
+  const knocklyonLabel = `Knocklyon${
+    club.knocklyon_teams?.name ? ` ${club.knocklyon_teams.name}` : ""
+  }`;
+  const opponentLabel = club.team_name
+    ? `${club.name} ${club.team_name}`
+    : club.name;
+  const isHome = fixture?.is_knocklyon_home ?? true;
+  const confirmedByUs = Boolean(fixture?.secretary_confirmed_at);
+  const awayDone = fixture?.status === "confirmed" && !isHome;
+  const proposed = parseProposed(fixture?.proposed_dates);
+  const venue = isHome
+    ? (process.env.KNOCKLYON_LOCATION ?? "Knocklyon Community Centre")
+    : club.venue_location;
+  const venueMap = isHome
+    ? (process.env.KNOCKLYON_MAP_LINK ?? "")
+    : club.venue_map_link;
+
+  return (
+    <main className="max-w-2xl mx-auto px-6 py-10 space-y-8">
+      <header className="space-y-3">
+        <div className="text-sm font-medium text-purple-800 uppercase tracking-wide">
+          Cup{club.cup_round ? ` · ${club.cup_round}` : ""}
+        </div>
+        <h1 className="text-2xl font-semibold text-zinc-900">
+          {isHome
+            ? `${knocklyonLabel} vs ${opponentLabel}`
+            : `${opponentLabel} vs ${knocklyonLabel}`}
+        </h1>
+        <p className="text-zinc-700">
+          Hi {club.name} secretary,{" "}
+          {isHome
+            ? "this cup tie is a single match, played at Knocklyon."
+            : "this cup tie is a single match, played at your venue."}
+        </p>
+      </header>
+
+      {err && <ErrorBanner code={err} conflictDates={conflictDates} />}
+      {ok && <SuccessBanner code={ok} />}
+
+      <section
+        className={`rounded-lg border p-5 sm:p-6 space-y-4 ${
+          confirmedByUs || awayDone ? "border-forest/40 bg-forest/5" : "border-zinc-200 bg-white"
+        }`}
+      >
+        {venue && (
+          <p className="text-sm text-zinc-700">
+            📍 {venue}
+            {venueMap && (
+              <>
+                {" "}
+                &middot;{" "}
+                <a href={venueMap} target="_blank" rel="noreferrer" className="text-forest hover:underline">
+                  open map
+                </a>
+              </>
+            )}
+          </p>
+        )}
+
+        {isHome ? (
+          !fixture || !homeDate ? (
+            <p className="text-zinc-600">
+              Knocklyon will be in touch shortly with the date for this match.
+              Please check back soon.
+            </p>
+          ) : confirmedByUs ? (
+            <div className="space-y-3">
+              <ConfirmedCard date={homeDate} time={fixture.match_time} />
+              <p className="text-sm text-zinc-700">
+                Thanks, you&rsquo;ve confirmed this date. Nothing more to do here.
+              </p>
+              {club.secretary_note && (
+                <div className="rounded border border-zinc-200 bg-white text-sm px-3 py-2 whitespace-pre-wrap">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">
+                    Your message
+                  </div>
+                  {club.secretary_note}
+                </div>
+              )}
+            </div>
+          ) : (
+            <form action={confirmCupHomeDate} className="space-y-4">
+              <input type="hidden" name="token" value={token} />
+              <div className="rounded-lg border border-purple-300 bg-purple-50 px-4 py-3">
+                <div className="text-xs text-purple-800 uppercase tracking-wide">
+                  Date set by Knocklyon
+                </div>
+                <div className="text-lg font-semibold text-zinc-900 mt-0.5">
+                  {formatDate(homeDate)}
+                  {fixture.match_time && (
+                    <span className="ml-2 font-medium text-zinc-800">
+                      at {formatTime(fixture.match_time)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <label className="block">
+                <span className="text-sm font-medium text-zinc-800">
+                  Message for Knocklyon{" "}
+                  <span className="font-normal text-zinc-500">(optional)</span>
+                </span>
+                <textarea
+                  name="note"
+                  defaultValue={club.secretary_note ?? ""}
+                  rows={3}
+                  placeholder="Anything we should know, e.g. arrival time or parking."
+                  className="mt-2 w-full rounded border border-zinc-300 px-3 py-2 text-sm resize-y"
+                />
+              </label>
+              <SubmitButton
+                className="rounded bg-forest px-4 py-2 text-white text-sm hover:bg-forest-dark"
+                pendingLabel="Confirming…"
+              >
+                Confirm this date
+              </SubmitButton>
+              <p className="text-xs text-zinc-500">
+                If this date doesn&rsquo;t work for you, reply to the email we
+                sent you and we will arrange another.
+              </p>
+            </form>
+          )
+        ) : awayDone && fixture?.confirmed_date ? (
+          <div className="space-y-4">
+            <ConfirmedCard date={fixture.confirmed_date} time={fixture.match_time} />
+            <VenueForm token={token} location={club.venue_location} mapLink={club.venue_map_link} compact />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <VenueForm token={token} location={club.venue_location} mapLink={club.venue_map_link} />
+            <AwayProposalForm token={token} proposed={proposed} note={club.secretary_note} />
+          </div>
+        )}
+      </section>
     </main>
   );
 }
@@ -660,6 +841,7 @@ function SuccessBanner({ code }: { code: string }) {
       "Your proposal has been sent. Knocklyon will pick one of your dates.",
     venue_saved: "Venue details saved.",
     note_saved: "Your message has been saved.",
+    cup_confirmed: "Thanks, the date is confirmed.",
   };
   return (
     <div

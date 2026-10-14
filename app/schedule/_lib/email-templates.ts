@@ -590,13 +590,16 @@ export function captainHomeDatesAddedEmailHtml({ teamLabel, division, captainNam
 }
 
 export function secretaryFixtureUpdateEmailHtml({ kind, matchup, secretaryClub, rows, note }: {
-  kind: 'home_picked' | 'away_proposed' | 'captain_confirmed'; matchup: string; secretaryClub: string;
+  kind: 'home_picked' | 'away_proposed' | 'captain_confirmed' | 'cup_confirmed'; matchup: string; secretaryClub: string;
   rows: { label: string; value: string }[]; note?: string | null;
 }): string {
   const picked = kind === 'home_picked';
   const confirmed = kind === 'captain_confirmed';
-  const title = picked ? 'Home date picked' : confirmed ? 'Captain confirmed away date' : 'Away dates offered';
-  const intro = picked
+  const cupConfirmed = kind === 'cup_confirmed';
+  const title = cupConfirmed ? 'Cup date confirmed' : picked ? 'Home date picked' : confirmed ? 'Captain confirmed away date' : 'Away dates offered';
+  const intro = cupConfirmed
+    ? `<strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> has confirmed the cup date for <strong>${escapeHtml(matchup)}</strong>.`
+    : picked
     ? `<strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> has picked a home date for <strong>${escapeHtml(matchup)}</strong>.`
     : confirmed
     ? `The captain has confirmed one of the dates offered by <strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> for <strong>${escapeHtml(matchup)}</strong>.`
@@ -615,20 +618,20 @@ export function secretaryFixtureUpdateEmailHtml({ kind, matchup, secretaryClub, 
   });
 }
 
-export function captainDatesOfferedEmailHtml({ captainName, teamLabel, opponent, rows, link, note }: {
-  captainName: string | null; teamLabel: string; opponent: string;
+export function captainDatesOfferedEmailHtml({ captainName, teamLabel, opponent, rows, link, note, cupRound }: {
+  captainName: string | null; teamLabel: string; opponent: string; cupRound?: string | null;
   rows: { label: string; value: string }[]; link: string; note?: string | null;
 }): string {
   const greeting = captainName ? `Hi ${escapeHtml(captainName)},` : 'Hi Captain,';
   const table = rows.map(r => `<tr><td style="padding:10px 12px 10px 0;font-family:${FONT_STACK};font-size:13px;color:${ZINC_500};border-bottom:1px solid ${ZINC_100};white-space:nowrap">${escapeHtml(r.label)}</td><td style="padding:10px 0;font-family:${FONT_STACK};font-size:15px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${escapeHtml(r.value)}</strong></td></tr>`).join('');
   return shell({
-    preheader: `${opponent} has offered two dates for your away match. Please confirm one.`,
+    preheader: `${opponent} has offered two dates for your${cupRound !== undefined ? ' cup' : ''} away match. Please confirm one.`,
     audience: 'captain',
     bodyInner: `
-      ${kicker('Away match dates')}
-      ${h1('Please confirm your away match date')}
+      ${kicker(cupRound !== undefined ? `Cup${cupRound ? ` · ${escapeHtml(cupRound)}` : ''} · Away match dates` : 'Away match dates')}
+      ${h1(cupRound !== undefined ? 'Please confirm your cup away match date' : 'Please confirm your away match date')}
       ${p(greeting)}
-      ${p(`<strong>${escapeHtml(opponent)}</strong> has offered two dates for the away match of <strong>${escapeHtml(teamLabel)}</strong>. Please open your captain portal and confirm the one that suits your team.`)}
+      ${p(`<strong>${escapeHtml(opponent)}</strong> has offered two dates for the${cupRound !== undefined ? ' <strong>cup</strong>' : ''} away match of <strong>${escapeHtml(teamLabel)}</strong>. Please open your captain portal and confirm the one that suits your team.`)}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:2px solid ${FOREST}">${table}</table>
       ${note ? `<p style="margin:0 0 4px;font-family:${FONT_STACK};font-size:13px;font-weight:700;color:${ZINC_900}">Note from ${escapeHtml(opponent)}</p>${p(escapeHtml(note).replace(/\n/g, '<br>'))}` : ''}
       <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0"><tr><td>${button('Review and confirm', link)}</td></tr></table>
@@ -637,4 +640,59 @@ export function captainDatesOfferedEmailHtml({ captainName, teamLabel, opponent,
       <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Thanks,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
     `,
   });
+}
+
+
+export function cupInviteEmailHtml({ clubName, knocklyonLabel, opponentLabel, round, isHome, dateLabel, timeLabel, link }: {
+  clubName: string; knocklyonLabel: string; opponentLabel: string; round: string | null;
+  isHome: boolean; dateLabel: string | null; timeLabel: string | null; link: string;
+}): string {
+  const roundLabel = round ? `Cup ${round}` : 'Cup tie';
+  const headline = `${knocklyonLabel} vs ${opponentLabel}`;
+  const intro = isHome
+    ? dateLabel
+      ? `Knocklyon Badminton Club has set the date for your cup tie, <strong>${escapeHtml(headline)}</strong>, to be played at Knocklyon: <strong>${escapeHtml(dateLabel)}${timeLabel ? ` at ${escapeHtml(timeLabel)}` : ''}</strong>. Please open your portal to confirm it works for you.`
+      : `Knocklyon Badminton Club will play your cup tie, <strong>${escapeHtml(headline)}</strong>, at Knocklyon. We will be in touch shortly with the date.`
+    : `Your cup tie, <strong>${escapeHtml(headline)}</strong>, will be played at your venue. Please open your portal and suggest two dates and start times that suit you.`;
+  const body = `
+    ${kicker(roundLabel)}
+    ${h1(headline)}
+    ${p(`Hi ${escapeHtml(clubName)} secretary,`)}
+    ${p(intro)}
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:12px 0 28px 0"><tr><td>${button('Open scheduling portal', link)}</td></tr></table>
+    ${isHome ? p(`If the date doesn&rsquo;t work for you, simply reply to this email and we will arrange another.`) : ''}
+    ${p(`<strong>Your link is unique to ${escapeHtml(clubName)}.</strong> Please don&rsquo;t forward it publicly. If the button doesn&rsquo;t open, paste this URL into your browser:`, 6)}
+    <p style="margin:0 0 24px 0;font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${ZINC_500};word-break:break-all"><a href="${link}" style="color:${FOREST};text-decoration:underline">${link}</a></p>
+    ${p(`Any questions, just reply to this email and it will come straight to the Knocklyon secretary.`)}
+    <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Kind regards,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
+  `;
+  return shell({ preheader: `${roundLabel}: ${headline}.`, bodyInner: body });
+}
+
+export function cupConfirmationEmailHtml({ clubName, knocklyonLabel, opponentLabel, round, isHome, date, time, venue, mapLink, googleCalLink }: {
+  clubName: string; knocklyonLabel: string; opponentLabel: string; round: string | null; isHome: boolean;
+  date: string; time: string | null; venue: string; mapLink: string; googleCalLink: string;
+}): string {
+  const roundLabel = round ? `Cup ${round}` : 'Cup tie';
+  const headline = isHome ? `${knocklyonLabel} vs ${opponentLabel}` : `${opponentLabel} vs ${knocklyonLabel}`;
+  const row = (label: string, value: string) => `<tr><td style="padding:10px 12px 10px 0;font-family:${FONT_STACK};font-size:13px;color:${ZINC_500};border-bottom:1px solid ${ZINC_100};white-space:nowrap">${label}</td><td style="padding:10px 0;font-family:${FONT_STACK};font-size:15px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${value}</strong></td></tr>`;
+  const venueHtml = venue
+    ? `${escapeHtml(venue)}${mapLink ? `<br><a href="${mapLink}" style="font-size:13px;font-weight:400;color:${FOREST};text-decoration:none">Open in Google Maps &rarr;</a>` : ''}`
+    : `<span style="color:${ZINC_500};font-weight:400">To be confirmed</span>`;
+  const body = `
+    ${kicker(roundLabel)}
+    ${h1('Cup match confirmed')}
+    ${p(`Hi ${escapeHtml(clubName)} secretary,`)}
+    ${p(`Your cup tie, <strong>${escapeHtml(headline)}</strong>, is confirmed. Details below.`)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:2px solid ${FOREST}">
+      ${row('Match', escapeHtml(headline))}
+      ${row('Date', escapeHtml(formatDateLong(date)))}
+      ${row('Start time', escapeHtml(time ? formatTimeFriendly(time) : 'To be confirmed'))}
+      ${row('Venue', venueHtml)}
+    </table>
+    ${googleCalLink ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0"><tr><td bgcolor="${WHITE}" style="background-color:${WHITE};border:1px solid ${FOREST};border-radius:6px"><a href="${googleCalLink}" target="_blank" style="display:inline-block;padding:8px 14px;font-family:${FONT_STACK};font-size:13px;font-weight:600;color:${FOREST};text-decoration:none;line-height:1">📅 Add to Google Calendar</a></td></tr></table>` : ''}
+    ${p(`A calendar file is attached for other calendar apps. If anything changes, just reply to this email.`)}
+    <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Kind regards,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
+  `;
+  return shell({ preheader: `${roundLabel} confirmed: ${headline}.`, bodyInner: body });
 }

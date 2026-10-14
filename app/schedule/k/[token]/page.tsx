@@ -62,7 +62,7 @@ export default async function CaptainPage({
   ]);
   const { data: offeredRaw } = await supabase
     .from("fixtures")
-    .select("id, proposed_dates, clubs!inner(name, team_name, secretary_note, knocklyon_team_id)")
+    .select("id, proposed_dates, clubs!inner(name, team_name, secretary_note, competition, cup_round, knocklyon_team_id)")
     .eq("is_knocklyon_home", false)
     .eq("status", "awaiting_date")
     .eq("clubs.knocklyon_team_id", team.id)
@@ -71,14 +71,14 @@ export default async function CaptainPage({
     (offeredRaw ?? []) as unknown as {
       id: string;
       proposed_dates: { date: string; time: string }[] | null;
-      clubs: { name: string; team_name: string | null; secretary_note: string | null };
+      clubs: { name: string; team_name: string | null; secretary_note: string | null; competition: string | null; cup_round: string | null };
     }[]
   ).filter((f) => (f.proposed_dates?.length ?? 0) > 0);
 
   const { data: fixturesRaw } = await supabase
     .from("fixtures")
     .select(
-      "id, is_knocklyon_home, status, confirmed_date, match_time, proposed_dates, home_slots(slot_date), clubs!inner(name, team_name, venue_location, venue_map_link, knocklyon_team_id)"
+      "id, is_knocklyon_home, status, confirmed_date, match_time, proposed_dates, home_slots(slot_date), clubs!inner(name, team_name, venue_location, venue_map_link, competition, cup_round, knocklyon_team_id)"
     )
     .eq("clubs.knocklyon_team_id", team.id)
     .neq("status", "cancelled");
@@ -102,6 +102,8 @@ export default async function CaptainPage({
         team_name: string | null;
         venue_location: string | null;
         venue_map_link: string | null;
+        competition?: string | null;
+        cup_round?: string | null;
       };
     }[]
   )
@@ -117,6 +119,7 @@ export default async function CaptainPage({
         id: f.id,
         home: f.is_knocklyon_home,
         opponent: `${f.clubs.name}${f.clubs.team_name ? ` ${f.clubs.team_name}` : ""}`,
+        cup: f.clubs.competition === "cup" ? (f.clubs.cup_round ?? "Cup") : null,
         clubName: f.clubs.name,
         date,
         time: f.match_time,
@@ -205,6 +208,11 @@ export default async function CaptainPage({
               <div className="font-medium text-zinc-900">
                 {f.clubs.name}
                 {f.clubs.team_name ? ` ${f.clubs.team_name}` : ""} (away)
+                {f.clubs.competition === "cup" && (
+                  <span className="ml-2 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5 align-middle">
+                    Cup{f.clubs.cup_round ? ` · ${f.clubs.cup_round}` : ""}
+                  </span>
+                )}
               </div>
               {f.clubs.secretary_note && (
                 <div className="rounded bg-zinc-50 border border-zinc-200 px-3 py-2 text-sm text-zinc-700">
@@ -297,6 +305,11 @@ export default async function CaptainPage({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="font-medium text-zinc-900">
                         {f.home ? "vs" : "at"} {f.opponent}
+                        {f.cup && (
+                          <span className="ml-2 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5">
+                            Cup · {f.cup}
+                          </span>
+                        )}
                       </div>
                       <span
                         className={`text-xs font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${

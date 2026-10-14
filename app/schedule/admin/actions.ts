@@ -16,7 +16,10 @@ import {
 } from "../_lib/notify";
 import {
   inviteEmailHtml,
+  cupInviteEmailHtml,
   captainInviteEmailHtml,
+  formatDateLong,
+  formatTimeFriendly,
 } from "../_lib/email-templates";
 import { capacityForDate } from "../_lib/config";
 
@@ -293,6 +296,149 @@ export async function addClub(
   return { ok: true };
 }
 
+export async function addCupTie(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireAdmin();
+
+  const teamId = ((formData.get("knocklyon_team_id") as string) ?? "").trim();
+  const name = ((formData.get("name") as string) ?? "").trim();
+  const teamName = ((formData.get("team_name") as string) ?? "").trim() || null;
+  const email = ((formData.get("email") as string) ?? "").trim();
+  const round = ((formData.get("round") as string) ?? "").trim().slice(0, 40);
+  const isHome = (formData.get("venue") as string) !== "away";
+  const date = ((formData.get("date") as string) ?? "").trim();
+  const time = ((formData.get("time") as string) ?? "").trim() || null;
+  const sendConfirmation = formData.get("send_confirmation") === "on";
+  const venueLocation = ((formData.get("venue_location") as string) ?? "").trim() || null;
+  const venueMapLink = ((formData.get("venue_map_link") as string) ?? "").trim() || null;
+
+  if (!teamId) return { error: "Missing Knocklyon team." };
+  if (!name || !email) {
+    return { error: "Club name and secretary email are required." };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Please enter a valid email address." };
+  }
+  if (!round) return { error: "Please pick the cup round." };
+
+  if (date) {
+    const conflict = await findKnocklyonTeamMatchConflict(teamId, date);
+    if (conflict) {
+      return {
+        error: conflict.linked
+          ? `${conflict.name} (shares players with this team) already has a match on that date.`
+          : `${conflict.name} already has a match on that date.`,
+      };
+    }
+    if (isHome && capacityForDate(date) < 1) {
+      return {
+        error:
+          "Knocklyon can't host on that day of the week. Try a Monday (or Tue/Thu).",
+      };
+    }
+  }
+
+  const supabase = getSupabase();
+  const { data: club, error: clubErr } = await supabase
+    .from("clubs")
+    .insert({
+      name,
+      team_name: teamName,
+      secretary_email: email,
+      knocklyon_team_id: teamId,
+      access_token: randomBytes(24).toString("base64url"),
+      competition: "cup",
+      cup_round: round,
+      ...(!isHome ? { venue_location: venueLocation, venue_map_link: venueMapLink } : {}),
+    })
+    .select("id")
+    .single();
+  if (clubErr || !club) {
+    return {
+      error:
+        clubErr?.message ??
+        "Failed to add cup tie. Has the cup SQL been run in Supabase?",
+    };
+  }
+
+  const { data: fixture, error: fixErr } = await supabase
+    .from("fixtures")
+    .insert({ opponent_club_id: club.id, is_knocklyon_home: isHome })
+    .select("id")
+    .single();
+  if (fixErr || !fixture) {
+    await supabase.from("clubs").delete().eq("id", club.id);
+    return { error: fixErr?.message ?? "Failed to create the cup fixture." };
+  }
+
+  if (date) {
+    const rollback = async (error: string): Promise<FormState> => {
+      await supabase.from("clubs").delete().eq("id", club.id);
+      return { error };
+    };
+
+    if (isHome) {
+      let { data: slot } = await supabase
+        .from("home_slots")
+        .select("id")
+        .eq("slot_date", date)
+        .maybeSingle();
+      if (!slot) {
+        const ins = await supabase
+          .from("home_slots")
+          .insert({ slot_date: date, capacity: capacityForDate(date) })
+          .select("id")
+          .single();
+        if (ins.error || !ins.data) {
+          return rollback(ins.error?.message ?? "Failed to add venue date.");
+        }
+        slot = ins.data;
+      }
+      const { error: bookErr } = await supabase.rpc("book_slot", {
+        p_fixture_id: fixture.id,
+        p_slot_id: slot.id,
+      });
+      if (bookErr) {
+        const m = bookErr.message ?? "";
+        return rollback(
+          m.includes("slot_full")
+            ? "That date is already full at the venue."
+            : m.includes("team_conflict")
+              ? "This team, or a team sharing players with it, already has a match that day."
+              : m
+        );
+      }
+      await supabase
+        .from("fixtures")
+        .update({
+          match_time: time ?? "20:00",
+          secretary_confirmed_at: new Date().toISOString(),
+        })
+        .eq("id", fixture.id);
+    } else {
+      const { error: awayErr } = await supabase
+        .from("fixtures")
+        .update({
+          confirmed_date: date,
+          match_time: time,
+          status: "confirmed",
+          proposed_dates: null,
+        })
+        .eq("id", fixture.id);
+      if (awayErr) return rollback(awayErr.message);
+    }
+  }
+
+  if (date && sendConfirmation) {
+    await maybeSendConfirmationEmail(club.id);
+  }
+
+  revalidatePath("/schedule/admin");
+  return { ok: true };
+}
+
 export async function updateClub(formData: FormData) {
   await requireAdmin();
   const id = ((formData.get("id") as string) ?? "").trim();
@@ -315,7 +461,13 @@ export async function updateClub(formData: FormData) {
     team_name: string | null;
     secretary_email: string;
     invite_sent_at?: null;
+    venue_location?: string | null;
+    venue_map_link?: string | null;
   } = { name, team_name: teamName, secretary_email: email };
+  if (formData.has("venue_location")) {
+    patch.venue_location = ((formData.get("venue_location") as string) ?? "").trim() || null;
+    patch.venue_map_link = ((formData.get("venue_map_link") as string) ?? "").trim() || null;
+  }
   // A new address has not been invited yet, so show "Send invite" again.
   if (existing.secretary_email.toLowerCase() !== email.toLowerCase()) {
     patch.invite_sent_at = null;
@@ -534,6 +686,93 @@ export async function acceptProposedDate(formData: FormData) {
   revalidatePath("/schedule/admin");
 }
 
+export async function setCupHomeDate(formData: FormData) {
+  await requireAdmin();
+  const clubId = ((formData.get("id") as string) ?? "").trim();
+  const date = ((formData.get("date") as string) ?? "").trim();
+  const time = ((formData.get("time") as string) ?? "").trim() || "20:00";
+  if (!clubId || !date) return;
+
+  const supabase = getSupabase();
+  const { data: club } = await supabase
+    .from("clubs")
+    .select("knocklyon_team_id, competition")
+    .eq("id", clubId)
+    .single();
+  const { data: fixture } = await supabase
+    .from("fixtures")
+    .select("id, status, confirmed_date, confirmed_slot_id, home_slots:confirmed_slot_id(slot_date)")
+    .eq("opponent_club_id", clubId)
+    .eq("is_knocklyon_home", true)
+    .single<{
+      id: string;
+      status: string;
+      confirmed_date: string | null;
+      confirmed_slot_id: string | null;
+      home_slots: { slot_date: string } | null;
+    }>();
+  if (!club || club.competition !== "cup" || !fixture) return;
+  const teamId = club.knocklyon_team_id;
+
+  const bail = (code: string) =>
+    redirect(adminUrl(`msg=${code}&date=${encodeURIComponent(date)}`, teamId));
+
+  if (capacityForDate(date) < 1) bail("cup_date_day");
+
+  const currentDate = fixture.home_slots?.slot_date ?? null;
+  if (currentDate !== date) {
+    const conflict = await findKnocklyonTeamMatchConflict(teamId, date);
+    if (conflict) {
+      redirect(
+        adminUrl(
+          `msg=away_conflict&date=${encodeURIComponent(date)}&team_name=${encodeURIComponent(conflict.name)}${conflict.linked ? "&reason=linked" : ""}`,
+          teamId
+        )
+      );
+    }
+  }
+
+  const previous = {
+    status: fixture.status,
+    confirmed_slot_id: fixture.confirmed_slot_id,
+    match_time: null as string | null,
+  };
+
+  await supabase
+    .from("fixtures")
+    .update({ status: "awaiting_date", confirmed_slot_id: null, confirmed_date: null, match_time: null, secretary_confirmed_at: null })
+    .eq("id", fixture.id);
+
+  let { data: slot } = await supabase
+    .from("home_slots")
+    .select("id")
+    .eq("slot_date", date)
+    .maybeSingle();
+  if (!slot) {
+    const ins = await supabase
+      .from("home_slots")
+      .insert({ slot_date: date, capacity: capacityForDate(date) })
+      .select("id")
+      .single();
+    slot = ins.data;
+  }
+  const { error } = slot
+    ? await supabase.rpc("book_slot", { p_fixture_id: fixture.id, p_slot_id: slot.id })
+    : { error: { message: "slot_failed" } };
+
+  if (error) {
+    if (previous.confirmed_slot_id) {
+      await supabase.rpc("book_slot", { p_fixture_id: fixture.id, p_slot_id: previous.confirmed_slot_id });
+    }
+    bail(error.message?.includes("slot_full") ? "cup_date_full" : error.message?.includes("team_conflict") ? "cup_date_clash" : "cup_date_failed");
+  }
+
+  await supabase.from("fixtures").update({ match_time: time }).eq("id", fixture.id);
+  await supabase.from("clubs").update({ confirmation_email_sent_at: null }).eq("id", clubId);
+
+  revalidatePath("/schedule/admin");
+}
+
 export async function resetFixture(formData: FormData) {
   await requireAdmin();
   const fixtureId = formData.get("fixture_id") as string;
@@ -549,6 +788,7 @@ export async function resetFixture(formData: FormData) {
       confirmed_date: null,
       proposed_dates: null,
       match_time: null,
+      secretary_confirmed_at: null,
     })
     .eq("id", fixtureId)
     .select("opponent_club_id")
@@ -585,10 +825,12 @@ export async function sendInvite(formData: FormData) {
   const { data: club } = await getSupabase()
     .from("clubs")
     .select(
-      "name, team_name, secretary_email, access_token, knocklyon_team_id, knocklyon_teams(name, division)"
+      "name, team_name, secretary_email, access_token, knocklyon_team_id, competition, cup_round, knocklyon_teams(name, division)"
     )
     .eq("id", clubId)
     .single<{
+      competition: string | null;
+      cup_round: string | null;
       name: string;
       team_name: string | null;
       secretary_email: string;
@@ -613,6 +855,20 @@ export async function sendInvite(formData: FormData) {
   const division = club.knocklyon_teams?.division ?? null;
   const divisionSuffix = division ? ` (${division})` : "";
   const matchup = `${knocklyonLabel} vs ${opponentLabel}${divisionSuffix}`;
+
+  const isCup = club.competition === "cup";
+  type CupFixture = { is_knocklyon_home: boolean; match_time: string | null; confirmed_date: string | null; home_slots: { slot_date: string } | null };
+  let cupFixture: CupFixture | null = null;
+  if (isCup) {
+    const { data } = await getSupabase()
+      .from("fixtures")
+      .select("is_knocklyon_home, match_time, confirmed_date, home_slots:confirmed_slot_id(slot_date)")
+      .eq("opponent_club_id", clubId)
+      .single<CupFixture>();
+    cupFixture = data;
+  }
+  const cupDate = cupFixture?.home_slots?.slot_date ?? cupFixture?.confirmed_date ?? null;
+  const cupSubject = `Cup${club.cup_round ? ` ${club.cup_round}` : ""}: ${knocklyonLabel} vs ${opponentLabel}`;
 
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.CONTACT_FROM ?? "onboarding@resend.dev";
@@ -639,14 +895,25 @@ export async function sendInvite(formData: FormData) {
       from: fromEmail,
       to: club.secretary_email,
       bcc: ["info@knocklyonbc.ie"],
-      subject: `Schedule your fixtures: ${matchup}`,
-      html: inviteEmailHtml({
-        clubName: club.name,
-        knocklyonLabel,
-        opponentLabel,
-        division,
-        link,
-      }),
+      subject: isCup ? cupSubject : `Schedule your fixtures: ${matchup}`,
+      html: isCup
+        ? cupInviteEmailHtml({
+            clubName: club.name,
+            knocklyonLabel,
+            opponentLabel,
+            round: club.cup_round,
+            isHome: cupFixture?.is_knocklyon_home ?? true,
+            dateLabel: cupFixture?.is_knocklyon_home && cupDate ? formatDateLong(cupDate) : null,
+            timeLabel: cupFixture?.is_knocklyon_home && cupDate ? formatTimeFriendly(cupFixture.match_time) : null,
+            link,
+          })
+        : inviteEmailHtml({
+            clubName: club.name,
+            knocklyonLabel,
+            opponentLabel,
+            division,
+            link,
+          }),
     });
 
     if (result.error) {
