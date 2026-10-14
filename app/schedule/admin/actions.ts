@@ -293,6 +293,38 @@ export async function addClub(
   return { ok: true };
 }
 
+export async function updateClub(formData: FormData) {
+  await requireAdmin();
+  const id = ((formData.get("id") as string) ?? "").trim();
+  const name = ((formData.get("name") as string) ?? "").trim();
+  const teamName = ((formData.get("team_name") as string) ?? "").trim() || null;
+  const email = ((formData.get("email") as string) ?? "").trim();
+  if (!id || !name || !email) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+
+  const supabase = getSupabase();
+  const { data: existing } = await supabase
+    .from("clubs")
+    .select("secretary_email")
+    .eq("id", id)
+    .single();
+  if (!existing) return;
+
+  const patch: {
+    name: string;
+    team_name: string | null;
+    secretary_email: string;
+    invite_sent_at?: null;
+  } = { name, team_name: teamName, secretary_email: email };
+  // A new address has not been invited yet, so show "Send invite" again.
+  if (existing.secretary_email.toLowerCase() !== email.toLowerCase()) {
+    patch.invite_sent_at = null;
+  }
+
+  await supabase.from("clubs").update(patch).eq("id", id);
+  revalidatePath("/schedule/admin");
+}
+
 export async function deleteClub(formData: FormData) {
   await requireAdmin();
   const id = formData.get("id") as string;

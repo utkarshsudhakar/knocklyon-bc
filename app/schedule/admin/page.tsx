@@ -14,6 +14,7 @@ import {
 import {
   logout,
   deleteClub,
+  updateClub,
   removeTeamSlot,
   setAwayDate,
   resetFixture,
@@ -787,6 +788,49 @@ function ClubRow({ club }: { club: Club }) {
           )}
         </div>
       </div>
+      <details className="text-sm">
+        <summary className="cursor-pointer text-forest hover:underline">
+          Edit club details
+        </summary>
+        <form
+          key={`${club.id}:${club.name}:${club.team_name ?? ""}:${club.secretary_email}`}
+          action={updateClub}
+          className="mt-2 grid gap-2 sm:grid-cols-3"
+        >
+          <input type="hidden" name="id" value={club.id} />
+          <input
+            name="name"
+            placeholder="Club name"
+            defaultValue={club.name}
+            required
+            className="rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="team_name"
+            placeholder="Team (e.g. A)"
+            defaultValue={club.team_name ?? ""}
+            className="rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <input
+            name="email"
+            type="email"
+            placeholder="Secretary email"
+            defaultValue={club.secretary_email}
+            required
+            className="rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            className="rounded border border-forest bg-white text-forest text-sm font-medium hover:bg-forest hover:text-white px-4 py-2 sm:col-span-3 sm:w-fit"
+          >
+            Save club
+          </button>
+          <p className="text-xs text-zinc-500 sm:col-span-3">
+            Changing the email resets the invite status. Click Send invite to
+            email the new address. Their personal link does not change.
+          </p>
+        </form>
+      </details>
       {club.secretary_note && (
         <div className="rounded border border-amber-200 bg-amber-50 text-amber-900 text-sm px-3 py-2 whitespace-pre-wrap">
           <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">
