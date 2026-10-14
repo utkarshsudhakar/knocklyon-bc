@@ -590,13 +590,16 @@ export function captainHomeDatesAddedEmailHtml({ teamLabel, division, captainNam
 }
 
 export function secretaryFixtureUpdateEmailHtml({ kind, matchup, secretaryClub, rows, note }: {
-  kind: 'home_picked' | 'away_proposed'; matchup: string; secretaryClub: string;
+  kind: 'home_picked' | 'away_proposed' | 'captain_confirmed'; matchup: string; secretaryClub: string;
   rows: { label: string; value: string }[]; note?: string | null;
 }): string {
   const picked = kind === 'home_picked';
-  const title = picked ? 'Home date picked' : 'Away dates offered';
+  const confirmed = kind === 'captain_confirmed';
+  const title = picked ? 'Home date picked' : confirmed ? 'Captain confirmed away date' : 'Away dates offered';
   const intro = picked
     ? `<strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> has picked a home date for <strong>${escapeHtml(matchup)}</strong>.`
+    : confirmed
+    ? `The captain has confirmed one of the dates offered by <strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> for <strong>${escapeHtml(matchup)}</strong>.`
     : `<strong style="color:${FOREST}">${escapeHtml(secretaryClub)}</strong> has offered away dates for <strong>${escapeHtml(matchup)}</strong>.`;
   const table = rows.map(r => `<tr><td style="padding:10px 12px 10px 0;font-family:${FONT_STACK};font-size:13px;color:${ZINC_500};border-bottom:1px solid ${ZINC_100};white-space:nowrap">${escapeHtml(r.label)}</td><td style="padding:10px 0;font-family:${FONT_STACK};font-size:15px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${escapeHtml(r.value)}</strong></td></tr>`).join('');
   return shell({
@@ -608,6 +611,29 @@ export function secretaryFixtureUpdateEmailHtml({ kind, matchup, secretaryClub, 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${FOREST_TINT}" style="background-color:${FOREST_TINT};border-radius:8px;border-left:4px solid ${FOREST};margin:0 0 24px"><tr><td style="padding:18px 20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${ZINC_700}">${intro}</td></tr></table>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:${note ? 16 : 24}px;border-top:2px solid ${FOREST}">${table}</table>
       ${note ? `<p style="margin:0 0 4px;font-family:${FONT_STACK};font-size:13px;font-weight:700;color:${ZINC_900}">Note from the secretary</p>${p(escapeHtml(note).replace(/\n/g, '<br>'))}` : ''}
+    `,
+  });
+}
+
+export function captainDatesOfferedEmailHtml({ captainName, teamLabel, opponent, rows, link }: {
+  captainName: string | null; teamLabel: string; opponent: string;
+  rows: { label: string; value: string }[]; link: string;
+}): string {
+  const greeting = captainName ? `Hi ${escapeHtml(captainName)},` : 'Hi Captain,';
+  const table = rows.map(r => `<tr><td style="padding:10px 12px 10px 0;font-family:${FONT_STACK};font-size:13px;color:${ZINC_500};border-bottom:1px solid ${ZINC_100};white-space:nowrap">${escapeHtml(r.label)}</td><td style="padding:10px 0;font-family:${FONT_STACK};font-size:15px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${escapeHtml(r.value)}</strong></td></tr>`).join('');
+  return shell({
+    preheader: `${opponent} has offered two dates for your away match. Please confirm one.`,
+    audience: 'captain',
+    bodyInner: `
+      ${kicker('Away match dates')}
+      ${h1('Please confirm your away match date')}
+      ${p(greeting)}
+      ${p(`<strong>${escapeHtml(opponent)}</strong> has offered two dates for the away match of <strong>${escapeHtml(teamLabel)}</strong>. Please open your captain portal and confirm the one that suits your team.`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:2px solid ${FOREST}">${table}</table>
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0"><tr><td>${button('Review and confirm', link)}</td></tr></table>
+      ${p(`Once you confirm, the date is final. If neither date works for your team, please contact your match secretary and they will arrange another date with the opposing club.`)}
+      <p style="margin:0 0 24px 0;font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${ZINC_500};word-break:break-all"><a href="${link}" style="color:${FOREST};text-decoration:underline">${link}</a></p>
+      <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Thanks,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
     `,
   });
 }

@@ -6,6 +6,7 @@ import { getSupabase } from "../../_lib/supabase";
 import {
   dateHasKnocklyonTeamMatch,
   notifyClubAwayDatesProposed,
+  notifyCaptainAwayDatesOffered,
   notifyClubHomeDatePicked,
   maybeSendConfirmationEmail,
 } from "../../_lib/notify";
@@ -160,6 +161,7 @@ export async function proposeAwayDates(formData: FormData) {
     .eq("id", club.id);
 
   await notifyClubAwayDatesProposed(club.id, proposed, note);
+  await notifyCaptainAwayDatesOffered(club.id, proposed);
 
   revalidatePath(`/schedule/c/${token}`);
   redirect(`/schedule/c/${token}?ok=away_proposed`);

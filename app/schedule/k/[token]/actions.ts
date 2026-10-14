@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSupabase } from "../../_lib/supabase";
-import { notifyClubHomeDatesAdded } from "../../_lib/notify";
+import {
+  notifyClubHomeDatesAdded,
+  notifyClubCaptainConfirmed,
+  findKnocklyonTeamMatchConflict,
+  maybeSendConfirmationEmail,
+} from "../../_lib/notify";
 import { capacityForDate, isCaptainAllowedDate } from "../../_lib/config";
 
 async function findTeamByToken(token: string) {
@@ -163,3 +168,53 @@ export async function captainRemoveDate(formData: FormData) {
   redirect(`/schedule/k/${token}?ok=date_removed`);
 }
 
+
+export async function captainConfirmDate(formData: FormData) {
+  const token = ((formData.get("token") as string) ?? "").trim();
+  const fixtureId = ((formData.get("fixture_id") as string) ?? "").trim();
+  const date = ((formData.get("date") as string) ?? "").trim();
+  if (!token || !fixtureId || !date) redirect(`/schedule/k/${token}?err=invalid`);
+
+  const team = await findTeamByToken(token);
+  if (!team) redirect(`/schedule/k/${token}?err=invalid`);
+
+  const supabase = getSupabase();
+  const { data: fixture } = await supabase
+    .from("fixtures")
+    .select("id, status, proposed_dates, opponent_club_id, clubs!inner(knocklyon_team_id)")
+    .eq("id", fixtureId)
+    .eq("is_knocklyon_home", false)
+    .single<{
+      id: string; status: string; opponent_club_id: string;
+      proposed_dates: { date: string; time: string }[] | null;
+      clubs: { knocklyon_team_id: string | null };
+    }>();
+  if (!fixture || fixture.clubs.knocklyon_team_id !== team.id) {
+    redirect(`/schedule/k/${token}?err=invalid`);
+  }
+  if (fixture.status === "confirmed") redirect(`/schedule/k/${token}?err=already_confirmed`);
+  const chosen = (fixture.proposed_dates ?? []).find((d) => d.date === date);
+  if (!chosen) redirect(`/schedule/k/${token}?err=invalid`);
+
+  const conflict = await findKnocklyonTeamMatchConflict(team.id, date);
+  if (conflict) redirect(`/schedule/k/${token}?err=date_conflict`);
+
+  const { error } = await supabase
+    .from("fixtures")
+    .update({
+      confirmed_date: chosen.date,
+      match_time: chosen.time,
+      status: "confirmed",
+      proposed_dates: null,
+    })
+    .eq("id", fixture.id)
+    .eq("status", "awaiting_date");
+  if (error) redirect(`/schedule/k/${token}?err=save_failed`);
+
+  await notifyClubCaptainConfirmed(fixture.opponent_club_id, chosen.date, chosen.time);
+  await maybeSendConfirmationEmail(fixture.opponent_club_id);
+
+  revalidatePath(`/schedule/k/${token}`);
+  revalidatePath("/schedule/admin");
+  redirect(`/schedule/k/${token}?ok=date_confirmed`);
+}

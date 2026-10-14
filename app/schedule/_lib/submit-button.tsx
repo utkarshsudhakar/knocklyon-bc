@@ -16,11 +16,13 @@ export default function SubmitButton({
   pendingLabel,
   className,
   disabled = false,
+  confirmMessage,
 }: {
   children: ReactNode;
   pendingLabel?: ReactNode;
   className?: string;
   disabled?: boolean;
+  confirmMessage?: string;
 }) {
   const { pending } = useFormStatus();
   const isDisabled = disabled || pending;
@@ -29,6 +31,9 @@ export default function SubmitButton({
     <button
       type="submit"
       disabled={isDisabled}
+      onClick={(e) => {
+        if (confirmMessage && !window.confirm(confirmMessage)) e.preventDefault();
+      }}
       aria-busy={pending || undefined}
       className={`inline-flex items-center justify-center gap-2 transition-opacity ${
         pending ? "opacity-80 cursor-wait" : ""

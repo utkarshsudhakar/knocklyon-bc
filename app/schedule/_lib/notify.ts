@@ -1,5 +1,6 @@
 import { getSupabase } from "./supabase";
-import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, secretaryFixtureUpdateEmailHtml, formatDateLong, formatTimeFriendly } from "./email-templates";
+import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, secretaryFixtureUpdateEmailHtml, captainDatesOfferedEmailHtml, formatDateLong, formatTimeFriendly } from "./email-templates";
+import { SITE_URL } from "../../site-url";
 import {
   generateIcs,
   googleCalendarLink,
@@ -344,5 +345,62 @@ export async function notifyClubAwayDatesProposed(
     );
   } catch (err) {
     console.error("[Club email] away dates proposed failed:", err);
+  }
+}
+
+/** Email the Knocklyon captain that dates were offered for their away match. Never throws. */
+export async function notifyCaptainAwayDatesOffered(
+  clubId: string,
+  proposed: { date: string; time: string }[],
+): Promise<void> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+    const { data: club } = await getSupabase()
+      .from("clubs")
+      .select("name, team_name, knocklyon_teams(name, division, captain_name, captain_email, access_token)")
+      .eq("id", clubId)
+      .single<{
+        name: string; team_name: string | null;
+        knocklyon_teams: { name: string; division: string | null; captain_name: string | null; captain_email: string | null; access_token: string } | null;
+      }>();
+    const team = club?.knocklyon_teams;
+    if (!club || !team?.captain_email) return;
+    const opponent = opponentLabel(club.name, club.team_name);
+    const rows = proposed.map((d, i) => ({
+      label: `Option ${i + 1}`,
+      value: `${formatDateLong(d.date)} at ${formatTimeFriendly(d.time)}`,
+    }));
+    const link = `${SITE_URL}/schedule/k/${team.access_token}`;
+    const { Resend } = await import("resend");
+    const result = await new Resend(apiKey).emails.send({
+      from: process.env.CONTACT_FROM ?? "onboarding@resend.dev",
+      to: team.captain_email,
+      subject: `Please confirm your away match date: ${knocklyonLabel(team.name)} vs ${opponent}`,
+      html: captainDatesOfferedEmailHtml({ captainName: team.captain_name, teamLabel: knocklyonLabel(team.name), opponent, rows, link }),
+      text: `${opponent} has offered two dates for your away match:\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}\n\nConfirm one here: ${link}\n\nIf neither works, please contact your match secretary.`,
+    });
+    if (result.error) console.error("[Captain dates email] Resend API error:", result.error);
+  } catch (err) {
+    console.error("[Captain dates email] failed:", err);
+  }
+}
+
+/** Tell the club inbox that a captain confirmed an offered away date. Never throws. */
+export async function notifyClubCaptainConfirmed(clubId: string, date: string, time: string | null): Promise<void> {
+  try {
+    const m = await loadMatchup(clubId);
+    if (!m) return;
+    const rows = [
+      { label: "Away date", value: formatDateLong(date) },
+      { label: "Match time", value: formatTimeFriendly(time) },
+    ];
+    await sendClubEmail(
+      `Captain confirmed away date: ${m.matchup}`,
+      secretaryFixtureUpdateEmailHtml({ kind: "captain_confirmed", matchup: m.matchup, secretaryClub: m.club, rows }),
+      `The captain confirmed the away date for ${m.matchup}.\n\n${rows.map((r) => `${r.label}: ${r.value}`).join("\n")}`,
+    );
+  } catch (err) {
+    console.error("[Club email] captain confirmed failed:", err);
   }
 }

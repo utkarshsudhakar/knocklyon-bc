@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getSupabase } from "../../_lib/supabase";
-import { captainRemoveDate, captainSaveNote } from "./actions";
+import { captainRemoveDate, captainSaveNote, captainConfirmDate } from "./actions";
 import { CAPTAIN_ALLOWED_WEEKDAYS, getCurrentSeason } from "../../_lib/config";
 import CaptainCalendar from "./captain-calendar";
 import SubmitButton from "../../_lib/submit-button";
@@ -60,6 +60,20 @@ export default async function CaptainPage({
       .select("confirmed_slot_id, status, opponent_club_id"),
     supabase.from("clubs").select("id").eq("knocklyon_team_id", team.id),
   ]);
+  const { data: offeredRaw } = await supabase
+    .from("fixtures")
+    .select("id, proposed_dates, clubs!inner(name, team_name, knocklyon_team_id)")
+    .eq("is_knocklyon_home", false)
+    .eq("status", "awaiting_date")
+    .eq("clubs.knocklyon_team_id", team.id)
+    .not("proposed_dates", "is", null);
+  const offered = (
+    (offeredRaw ?? []) as unknown as {
+      id: string;
+      proposed_dates: { date: string; time: string }[] | null;
+      clubs: { name: string; team_name: string | null };
+    }[]
+  ).filter((f) => (f.proposed_dates?.length ?? 0) > 0);
 
   const rows: SlotRow[] = (slotsRes.data ?? []) as unknown as SlotRow[];
   const teamClubIds = new Set(
@@ -111,6 +125,50 @@ export default async function CaptainPage({
 
       {ok && <SuccessBanner code={ok} n={n} skipped={skipped} />}
       {err && <ErrorBanner code={err} />}
+
+      {offered.length > 0 && (
+        <section className="rounded-lg border border-amber-300 bg-amber-50 p-5 sm:p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900">
+              Away dates offered — please confirm
+            </h2>
+            <p className="text-sm text-zinc-700 mt-0.5">
+              Pick the date that suits your team. Once confirmed it is final.
+              If neither date works, please contact your match secretary.
+            </p>
+          </div>
+          {offered.map((f) => (
+            <div key={f.id} className="rounded border border-amber-200 bg-white p-4 space-y-3">
+              <div className="font-medium text-zinc-900">
+                {f.clubs.name}
+                {f.clubs.team_name ? ` ${f.clubs.team_name}` : ""} (away)
+              </div>
+              {(f.proposed_dates ?? []).map((d) => (
+                <form
+                  key={d.date}
+                  action={captainConfirmDate}
+                  className="flex flex-wrap items-center justify-between gap-3"
+                >
+                  <input type="hidden" name="token" value={token} />
+                  <input type="hidden" name="fixture_id" value={f.id} />
+                  <input type="hidden" name="date" value={d.date} />
+                  <div className="font-medium">
+                    {formatDate(d.date)}
+                    <span className="ml-2 text-forest">· {formatTime(d.time)}</span>
+                  </div>
+                  <SubmitButton
+                    className="rounded bg-forest px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+                    pendingLabel="Confirming…"
+                    confirmMessage={`Confirm ${formatDate(d.date)} at ${formatTime(d.time)}? This is final and can't be changed afterwards. If you need a different date, contact your match secretary.`}
+                  >
+                    Confirm this date
+                  </SubmitButton>
+                </form>
+              ))}
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="rounded-lg border border-forest/30 bg-forest/5 p-5 space-y-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-forest">
@@ -264,6 +322,8 @@ function SuccessBanner({
     }
   } else if (code === "date_removed") {
     message = "Date removed.";
+  } else if (code === "date_confirmed") {
+    message = "Date confirmed. Thank you — the club has been notified.";
   } else if (code === "note_saved") {
     message = "Note saved.";
   }
@@ -285,6 +345,9 @@ function ErrorBanner({ code }: { code: string }) {
       "Please pick a Monday between November and March. If you need a Tuesday or Thursday, contact the match secretary.",
     already_added: "That date is already in your list.",
     save_failed: "Something went wrong saving. Please try again.",
+    already_confirmed: "This match already has a confirmed date.",
+    date_conflict:
+      "Your team (or a team sharing players with it) already has a match on that date. Please contact your match secretary.",
     has_booking:
       "You can't remove this date — your team already has a confirmed match here.",
   };
