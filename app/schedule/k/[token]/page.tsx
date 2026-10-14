@@ -75,6 +75,69 @@ export default async function CaptainPage({
     }[]
   ).filter((f) => (f.proposed_dates?.length ?? 0) > 0);
 
+  const { data: fixturesRaw } = await supabase
+    .from("fixtures")
+    .select(
+      "id, is_knocklyon_home, status, confirmed_date, match_time, proposed_dates, home_slots(slot_date), clubs!inner(name, team_name, venue_location, venue_map_link, knocklyon_team_id)"
+    )
+    .eq("clubs.knocklyon_team_id", team.id)
+    .neq("status", "cancelled");
+  const knocklyonVenue =
+    process.env.KNOCKLYON_LOCATION ?? "Knocklyon Community Centre";
+  const knocklyonMap = process.env.KNOCKLYON_MAP_LINK ?? "";
+  const todayDublin = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Europe/Dublin",
+  });
+  const myFixtures = (
+    (fixturesRaw ?? []) as unknown as {
+      id: string;
+      is_knocklyon_home: boolean;
+      status: string;
+      confirmed_date: string | null;
+      match_time: string | null;
+      proposed_dates: { date: string; time: string }[] | null;
+      home_slots: { slot_date: string } | null;
+      clubs: {
+        name: string;
+        team_name: string | null;
+        venue_location: string | null;
+        venue_map_link: string | null;
+      };
+    }[]
+  )
+    .map((f) => {
+      const date =
+        f.status === "confirmed"
+          ? f.is_knocklyon_home
+            ? (f.home_slots?.slot_date ?? null)
+            : f.confirmed_date
+          : null;
+      const offeredNow = (f.proposed_dates?.length ?? 0) > 0;
+      return {
+        id: f.id,
+        home: f.is_knocklyon_home,
+        opponent: `${f.clubs.name}${f.clubs.team_name ? ` ${f.clubs.team_name}` : ""}`,
+        clubName: f.clubs.name,
+        date,
+        time: f.match_time,
+        venue: f.is_knocklyon_home ? knocklyonVenue : f.clubs.venue_location,
+        map: f.is_knocklyon_home ? knocklyonMap : f.clubs.venue_map_link,
+        waiting: f.is_knocklyon_home
+          ? `Waiting for ${f.clubs.name} to pick a date`
+          : offeredNow
+            ? "Dates offered. Please confirm one above"
+            : `Waiting for ${f.clubs.name} to offer dates`,
+      };
+    })
+    .map((f) => ({ ...f, past: Boolean(f.date && f.date < todayDublin) }))
+    .sort((a, b) => {
+      const rank = (f: typeof a) => (f.past ? 2 : f.date ? 0 : 1);
+      if (rank(a) !== rank(b)) return rank(a) - rank(b);
+      if (a.past && b.past) return (b.date ?? "").localeCompare(a.date ?? "");
+      if (a.date && b.date) return a.date.localeCompare(b.date);
+      return a.opponent.localeCompare(b.opponent);
+    });
+
   const rows: SlotRow[] = (slotsRes.data ?? []) as unknown as SlotRow[];
   const teamClubIds = new Set(
     (teamClubsRes.data ?? []).map((c) => c.id)
@@ -178,6 +241,108 @@ export default async function CaptainPage({
             </div>
           ))}
         </section>
+      )}
+
+      {myFixtures.length > 0 && (
+        <details className="group rounded-lg border border-zinc-300 bg-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+            <div>
+              <div className="text-lg font-semibold text-zinc-900">
+                Your fixtures
+              </div>
+              <div className="text-sm text-zinc-600">
+                {myFixtures.filter((f) => f.date).length} of {myFixtures.length}{" "}
+                scheduled
+              </div>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-forest px-4 py-2 text-sm font-medium text-forest">
+              <span className="group-open:hidden">Tap to show</span>
+              <span className="hidden group-open:inline">Tap to hide</span>
+              <span
+                aria-hidden="true"
+                className="transition-transform group-open:rotate-180"
+              >
+                ▼
+              </span>
+            </span>
+          </summary>
+          <ul className="space-y-3 border-t border-zinc-200 p-4 sm:p-5">
+            {myFixtures.map((f) => (
+              <li
+                key={f.id}
+                className={`rounded-lg border p-4 ${
+                  f.date
+                    ? "border-forest/30 bg-forest/5"
+                    : "border-zinc-200 bg-white"
+                } ${f.past ? "opacity-60" : ""}`}
+              >
+                <div className="flex items-start gap-4">
+                  {f.date && (
+                    <div
+                      aria-hidden="true"
+                      className="w-16 shrink-0 overflow-hidden rounded-lg border border-forest/40 bg-white text-center shadow-sm"
+                    >
+                      <div className="bg-forest py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+                        {calendarParts(f.date).month}
+                      </div>
+                      <div className="text-2xl font-bold leading-tight text-zinc-900">
+                        {calendarParts(f.date).day}
+                      </div>
+                      <div className="pb-1 text-xs text-zinc-500">
+                        {calendarParts(f.date).weekday}
+                      </div>
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-medium text-zinc-900">
+                        {f.home ? "vs" : "at"} {f.opponent}
+                      </div>
+                      <span
+                        className={`text-xs font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${
+                          f.home
+                            ? "bg-forest text-white"
+                            : "bg-zinc-200 text-zinc-700"
+                        }`}
+                      >
+                        {f.home ? "Home" : "Away"}
+                        {f.past ? " · Past" : ""}
+                      </span>
+                    </div>
+                    {f.date ? (
+                      <div className="space-y-0.5 text-sm text-zinc-700">
+                        <div className="font-medium text-forest">
+                          {formatDate(f.date)}
+                          {f.time ? ` · ${formatTime(f.time)}` : ""}
+                        </div>
+                        {f.venue && (
+                          <div>
+                            {f.venue}
+                            {f.map && (
+                              <>
+                                {" · "}
+                                <a
+                                  href={f.map}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="underline"
+                                >
+                                  Map
+                                </a>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-zinc-500">{f.waiting}</div>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <section className="rounded-lg border border-forest/30 bg-forest/5 p-5 space-y-2">
@@ -369,6 +534,15 @@ function ErrorBanner({ code }: { code: string }) {
       {map[code] ?? "Something went wrong."}
     </div>
   );
+}
+
+function calendarParts(iso: string) {
+  const d = new Date(iso + "T00:00:00");
+  return {
+    month: d.toLocaleDateString("en-IE", { month: "short" }),
+    day: String(d.getDate()),
+    weekday: d.toLocaleDateString("en-IE", { weekday: "short" }),
+  };
 }
 
 function formatDate(iso: string): string {
