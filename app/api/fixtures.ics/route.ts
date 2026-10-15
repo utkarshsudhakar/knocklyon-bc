@@ -24,7 +24,11 @@ function readFixtures() {
     }
   }
 
-  walk(dir);
+  try {
+    walk(dir);
+  } catch (err) {
+    console.error("[fixtures.ics] could not read fixtures:", err);
+  }
   return results;
 }
 
