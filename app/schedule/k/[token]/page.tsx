@@ -62,7 +62,7 @@ export default async function CaptainPage({
   ]);
   const { data: offeredRaw } = await supabase
     .from("fixtures")
-    .select("id, proposed_dates, clubs!inner(name, team_name, secretary_note, competition, cup_round, knocklyon_team_id)")
+    .select("id, proposed_dates, clubs!inner(name, team_name, secretary_note, venue_location, venue_map_link, competition, cup_round, knocklyon_team_id)")
     .eq("is_knocklyon_home", false)
     .eq("status", "awaiting_date")
     .eq("clubs.knocklyon_team_id", team.id)
@@ -71,7 +71,7 @@ export default async function CaptainPage({
     (offeredRaw ?? []) as unknown as {
       id: string;
       proposed_dates: { date: string; time: string }[] | null;
-      clubs: { name: string; team_name: string | null; secretary_note: string | null; competition: string | null; cup_round: string | null };
+      clubs: { name: string; team_name: string | null; secretary_note: string | null; venue_location: string | null; venue_map_link: string | null; competition: string | null; cup_round: string | null };
     }[]
   ).filter((f) => (f.proposed_dates?.length ?? 0) > 0);
 
@@ -222,6 +222,19 @@ export default async function CaptainPage({
                   </span>
                 )}
               </div>
+              {f.clubs.venue_location && (
+                <div className="text-sm text-zinc-700">
+                  📍 {f.clubs.venue_location}
+                  {f.clubs.venue_map_link && (
+                    <>
+                      {" · "}
+                      <a href={f.clubs.venue_map_link} target="_blank" rel="noreferrer" className="underline">
+                        Map
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
               {f.clubs.secretary_note && (
                 <div className="rounded bg-zinc-50 border border-zinc-200 px-3 py-2 text-sm text-zinc-700">
                   <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">

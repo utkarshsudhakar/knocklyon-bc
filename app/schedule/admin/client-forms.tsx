@@ -1,6 +1,8 @@
 "use client";
 
+import TimeSlotSelect from "../_lib/time-slot-select";
 import { useActionState } from "react";
+import ClubNameEmailFields, { type ClubSuggestion } from "./club-fields";
 import {
   login,
   addClub,
@@ -107,8 +109,10 @@ export function AddKnocklyonTeamForm() {
 
 export function AddClubForm({
   teamId,
+  suggestions,
 }: {
   teamId: string;
+  suggestions: ClubSuggestion[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(
     addClub,
@@ -118,22 +122,13 @@ export function AddClubForm({
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-4 sm:gap-2">
       <input type="hidden" name="knocklyon_team_id" value={teamId} />
-      <input
-        name="name"
-        placeholder="Club name (e.g. ABC)"
-        required
-        className="rounded border border-zinc-300 px-3 py-2"
+      <ClubNameEmailFields
+        suggestions={suggestions}
+        inputClass="rounded border border-zinc-300 px-3 py-2"
       />
       <input
         name="team_name"
         placeholder="Their team (e.g. M2)"
-        className="rounded border border-zinc-300 px-3 py-2"
-      />
-      <input
-        name="email"
-        type="email"
-        placeholder="Secretary email"
-        required
         className="rounded border border-zinc-300 px-3 py-2"
       />
       <button
@@ -159,7 +154,13 @@ const CUP_ROUNDS = [
   "Final",
 ];
 
-export function AddCupTieForm({ teamId }: { teamId: string }) {
+export function AddCupTieForm({
+  teamId,
+  suggestions,
+}: {
+  teamId: string;
+  suggestions: ClubSuggestion[];
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(
     addCupTie,
     {}
@@ -171,20 +172,13 @@ export function AddCupTieForm({ teamId }: { teamId: string }) {
       className="grid gap-2 sm:grid-cols-6 rounded border border-zinc-200 bg-zinc-50 p-3"
     >
       <input type="hidden" name="knocklyon_team_id" value={teamId} />
-      <input
-        name="name"
-        placeholder="Opposing club"
-        required
-        className={`${field} sm:col-span-2`}
+      <ClubNameEmailFields
+        suggestions={suggestions}
+        nameWrapClass="sm:col-span-2"
+        emailWrapClass="sm:col-span-2"
+        inputClass={field}
       />
       <input name="team_name" placeholder="Their team (e.g. A)" className={field} />
-      <input
-        name="email"
-        type="email"
-        placeholder="Secretary email"
-        required
-        className={`${field} sm:col-span-2`}
-      />
       <select name="round" defaultValue="Round 1" className={field}>
         {CUP_ROUNDS.map((r) => (
           <option key={r}>{r}</option>
@@ -205,7 +199,7 @@ export function AddCupTieForm({ teamId }: { teamId: string }) {
         </summary>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <input type="date" name="date" className={field} />
-          <input type="time" name="time" className={field} />
+          <TimeSlotSelect name="time" blankLabel="Time (default 20:00)" className={field} />
           <span className="text-xs text-zinc-500">
             Leave blank if the date is still to be arranged.
           </span>

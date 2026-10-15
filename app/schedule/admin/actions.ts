@@ -240,6 +240,25 @@ export async function deleteKnocklyonTeam(formData: FormData) {
 
 // ── Opposing clubs ─────────────────────────────────────────────────────────
 
+async function rememberContact(name: string, email: string) {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("club_contacts")
+    .select("id")
+    .ilike("name", name.replace(/[%_\\]/g, "\\$&"))
+    .ilike("email", email.replace(/[%_\\]/g, "\\$&"))
+    .limit(1);
+  if (data && data.length > 0) return;
+  await supabase.from("club_contacts").insert({ name, email });
+}
+
+export async function deleteContact(id: string) {
+  await requireAdmin();
+  if (!id) return;
+  await getSupabase().from("club_contacts").delete().eq("id", id);
+  revalidatePath("/schedule/admin");
+}
+
 export async function addClub(
   _prev: FormState,
   formData: FormData
@@ -292,6 +311,7 @@ export async function addClub(
     };
   }
 
+  await rememberContact(name, email);
   revalidatePath("/schedule/admin");
   return { ok: true };
 }
@@ -435,6 +455,7 @@ export async function addCupTie(
     await maybeSendConfirmationEmail(club.id);
   }
 
+  await rememberContact(name, email);
   revalidatePath("/schedule/admin");
   return { ok: true };
 }
@@ -474,6 +495,7 @@ export async function updateClub(formData: FormData) {
   }
 
   await supabase.from("clubs").update(patch).eq("id", id);
+  await rememberContact(name, email);
   revalidatePath("/schedule/admin");
 }
 

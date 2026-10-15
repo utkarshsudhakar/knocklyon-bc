@@ -100,8 +100,11 @@ export async function proposeAwayDates(formData: FormData) {
   const date2 = ((formData.get("date2") as string) ?? "").trim();
   const time2 = ((formData.get("time2") as string) ?? "").trim();
   const note = ((formData.get("note") as string) ?? "").trim() || null;
+  const venueLocation = ((formData.get("venue_location") as string) ?? "").trim();
+  const venueMapLink = ((formData.get("venue_map_link") as string) ?? "").trim() || null;
 
   if (!token) redirect(`/schedule/c/${token}?err=invalid`);
+  if (!venueLocation) redirect(`/schedule/c/${token}?err=need_venue`);
   if (!date1 || !date2) {
     redirect(`/schedule/c/${token}?err=need_two_dates`);
   }
@@ -158,7 +161,11 @@ export async function proposeAwayDates(formData: FormData) {
   // Save the note alongside the proposal
   await supabase
     .from("clubs")
-    .update({ secretary_note: note })
+    .update({
+      secretary_note: note,
+      venue_location: venueLocation,
+      venue_map_link: venueMapLink,
+    })
     .eq("id", club.id);
 
   await notifyClubAwayDatesProposed(club.id, proposed, note);

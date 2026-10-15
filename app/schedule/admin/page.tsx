@@ -1,3 +1,4 @@
+import TimeSlotSelect from "../_lib/time-slot-select";
 import CourtBookings from "./court-bookings";
 import Link from "next/link";
 import { readFile } from "node:fs/promises";
@@ -452,6 +453,16 @@ async function TeamPanel({
     supabase.from("fixtures").select("confirmed_slot_id, status"),
   ]);
 
+  const { data: contacts } = await supabase
+    .from("club_contacts")
+    .select("id, name, email")
+    .order("name");
+  const clubSuggestions = (contacts ?? []) as {
+    id: string;
+    name: string;
+    email: string;
+  }[];
+
   const allClubs: Club[] = clubs ?? [];
   const clubById = new Map(allClubs.map((c) => [c.id, c]));
   const isCupClub = (c: Club | undefined) => c?.competition === "cup";
@@ -572,7 +583,7 @@ async function TeamPanel({
         <p className="text-sm text-zinc-600">
           Each opposing club auto-generates two fixtures (home + away).
         </p>
-        <AddClubForm teamId={team.id} />
+        <AddClubForm teamId={team.id} suggestions={clubSuggestions} />
         {clubsList.length === 0 ? (
           <p className="text-sm text-zinc-500 italic">
             No opposing clubs added yet.
@@ -666,7 +677,7 @@ async function TeamPanel({
           Add one entry per cup round. DDLC decides home or away, so just record
           it here. Each cup tie is a single match.
         </p>
-        <AddCupTieForm teamId={team.id} />
+        <AddCupTieForm teamId={team.id} suggestions={clubSuggestions} />
         {cupClubs.length === 0 ? (
           <p className="text-sm text-zinc-500 italic">No cup ties added yet.</p>
         ) : (
@@ -907,10 +918,9 @@ function ClubRow({
                   defaultValue={cupDate ?? ""}
                   className="rounded border border-zinc-300 px-2 py-1 text-xs"
                 />
-                <input
-                  type="time"
+                <TimeSlotSelect
                   name="time"
-                  defaultValue={cupFixture?.match_time?.slice(0, 5) ?? "20:00"}
+                  defaultValue={cupFixture?.match_time ?? "20:00"}
                   className="rounded border border-zinc-300 px-2 py-1 text-xs"
                 />
                 <SubmitButton className="text-xs text-forest hover:underline" pendingLabel="Saving…">
@@ -984,7 +994,7 @@ function ClubRow({
             required
             className="rounded border border-zinc-300 px-3 py-2 text-sm"
           />
-          {isCup && cupHome === false && (
+          {(!isCup || cupHome === false) && (
             <>
               <input
                 name="venue_location"
@@ -1094,10 +1104,9 @@ function FixtureTable({
                           name="fixture_id"
                           value={f.id}
                         />
-                        <input
-                          type="time"
+                        <TimeSlotSelect
                           name="time"
-                          defaultValue={displayTime ?? ""}
+                          defaultValue={displayTime ?? "19:00"}
                           className="rounded border border-zinc-300 px-2 py-1 text-xs"
                         />
                         <button
@@ -1210,8 +1219,7 @@ function ManualAwayDateForm({ fixtureId }: { fixtureId: string }) {
         required
         className="rounded border border-zinc-300 px-2 py-1 text-xs"
       />
-      <input
-        type="time"
+      <TimeSlotSelect
         name="time"
         defaultValue="19:00"
         className="rounded border border-zinc-300 px-2 py-1 text-xs"

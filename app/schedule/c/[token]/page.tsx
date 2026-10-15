@@ -334,15 +334,12 @@ export default async function SecretaryPage({
                 {club.knocklyon_teams?.secretary_visible_note ?? club.knocklyon_teams?.captain_note}
               </div>
             )}
-            <VenueForm
-              token={token}
-              location={club.venue_location}
-              mapLink={club.venue_map_link}
-            />
             <AwayProposalForm
               token={token}
               proposed={proposed}
               note={club.secretary_note}
+              venueLocation={club.venue_location}
+              venueMapLink={club.venue_map_link}
             />
           </div>
         )}
@@ -496,8 +493,13 @@ function CupView({
           </div>
         ) : (
           <div className="space-y-6">
-            <VenueForm token={token} location={club.venue_location} mapLink={club.venue_map_link} />
-            <AwayProposalForm token={token} proposed={proposed} note={club.secretary_note} />
+            <AwayProposalForm
+              token={token}
+              proposed={proposed}
+              note={club.secretary_note}
+              venueLocation={club.venue_location}
+              venueMapLink={club.venue_map_link}
+            />
           </div>
         )}
       </section>
@@ -687,10 +689,14 @@ function AwayProposalForm({
   token,
   proposed,
   note,
+  venueLocation,
+  venueMapLink,
 }: {
   token: string;
   proposed: ProposedDate[];
   note: string | null;
+  venueLocation: string | null;
+  venueMapLink: string | null;
 }) {
   const alreadyProposed = proposed.length >= 2;
   const [p1, p2] = proposed;
@@ -763,6 +769,37 @@ function AwayProposalForm({
           </div>
         </div>
 
+        <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            Your venue
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-xs text-zinc-600">Venue name and location</span>
+              <input
+                type="text"
+                name="venue_location"
+                defaultValue={venueLocation ?? ""}
+                required
+                placeholder="e.g. St Andrews Sports Centre, Booterstown"
+                className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm bg-white"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-zinc-600">
+                Google Maps link <span className="text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="url"
+                name="venue_map_link"
+                defaultValue={venueMapLink ?? ""}
+                placeholder="https://maps.google.com/…"
+                className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm bg-white"
+              />
+            </label>
+          </div>
+        </div>
+
         <label className="block">
           <span className="text-sm font-medium text-zinc-800">
             Additional comment or message{" "}
@@ -810,6 +847,7 @@ function ErrorBanner({
     need_two_dates: "Please pick two dates for your away proposal.",
     need_times: "Please pick a start time for each proposed date.",
     duplicate_dates: "Please pick two different dates.",
+    need_venue: "Please enter your venue name so our captain knows where the match is.",
     save_failed:
       "Something went wrong saving your proposal. Please try again.",
   };
