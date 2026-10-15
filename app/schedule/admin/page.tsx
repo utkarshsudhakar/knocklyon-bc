@@ -1,6 +1,6 @@
 import TimeSlotSelect from "../_lib/time-slot-select";
 import CourtBookings from "./court-bookings";
-import Link from "next/link";
+import TeamTab from "./team-tab";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { getSupabase } from "../_lib/supabase";
@@ -371,30 +371,13 @@ export default async function AdminPage({
           {teamsList.map((t) => {
             const active = t.id === selectedTeamId;
             return (
-              <Link
+              <TeamTab
                 key={t.id}
                 href={`/schedule/admin?team=${t.id}`}
-                scroll={false}
-                aria-current={active ? "page" : undefined}
-                className={`group flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm transition-all ${
-                  active
-                    ? "border-forest bg-forest text-white shadow-sm"
-                    : "border-zinc-200 bg-white text-zinc-800 hover:border-forest hover:text-forest hover:shadow-sm"
-                }`}
-              >
-                <span className="font-semibold">{t.name}</span>
-                {t.division && (
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      active
-                        ? "bg-white/20 text-white"
-                        : "bg-zinc-100 text-zinc-700 group-hover:bg-forest/10 group-hover:text-forest"
-                    }`}
-                  >
-                    {t.division}
-                  </span>
-                )}
-              </Link>
+                active={active}
+                name={t.name}
+                division={t.division}
+              />
             );
           })}
         </nav>

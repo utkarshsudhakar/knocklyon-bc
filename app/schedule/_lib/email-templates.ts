@@ -468,7 +468,7 @@ export function confirmationEmailHtml({
     })}
 
     ${p(`Both fixtures are also attached as a <strong>calendar file</strong>. Apple Mail, Outlook, and Gmail will offer an "Add to calendar" prompt for the attachment. Google Cal users can also use the buttons above.`, 8)}
-    ${p(`If anything needs to change, just reply and we&rsquo;ll sort it.`, 24)}
+    ${p(`Please review the date, time and venue details above and let us know if anything needs correction. Just reply to this email and we&rsquo;ll sort it.`, 24)}
 
     <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">
       Best of luck for the season,<br>
@@ -683,7 +683,7 @@ export function cupConfirmationEmailHtml({ clubName, knocklyonLabel, opponentLab
     ${kicker(roundLabel)}
     ${h1('Cup match confirmed')}
     ${p(`Hi ${escapeHtml(clubName)} secretary,`)}
-    ${p(`Your cup tie, <strong>${escapeHtml(headline)}</strong>, is confirmed. Details below.`)}
+    ${p(`Your cup tie against Knocklyon, <strong>${escapeHtml(headline)}</strong>, is now confirmed. Full details are below. Please share these with your team.`)}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:2px solid ${FOREST}">
       ${row('Match', escapeHtml(headline))}
       ${row('Date', escapeHtml(formatDateLong(date)))}
@@ -691,8 +691,9 @@ export function cupConfirmationEmailHtml({ clubName, knocklyonLabel, opponentLab
       ${row('Venue', venueHtml)}
     </table>
     ${googleCalLink ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0"><tr><td bgcolor="${WHITE}" style="background-color:${WHITE};border:1px solid ${FOREST};border-radius:6px"><a href="${googleCalLink}" target="_blank" style="display:inline-block;padding:8px 14px;font-family:${FONT_STACK};font-size:13px;font-weight:600;color:${FOREST};text-decoration:none;line-height:1">📅 Add to Google Calendar</a></td></tr></table>` : ''}
-    ${p(`A calendar file is attached for other calendar apps. If anything changes, just reply to this email.`)}
-    <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Kind regards,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
+    ${p(`The match is also attached as a <strong>calendar file</strong>. Apple Mail, Outlook, and Gmail will offer an "Add to calendar" prompt for the attachment.`, 8)}
+    ${p(`Please review the date, time and venue details above and let us know if anything needs correction. Just reply to this email and we&rsquo;ll sort it.`, 24)}
+    <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Best of luck in the cup,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
   `;
   return shell({ preheader: `${roundLabel} confirmed: ${headline}.`, bodyInner: body });
 }
