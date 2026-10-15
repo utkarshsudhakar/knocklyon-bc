@@ -348,12 +348,12 @@ export default async function AdminPage({
                         </div>
                       </fieldset>
                     )}
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingLabel="Saving…"
                       className="rounded border border-forest bg-white text-forest text-sm font-medium hover:bg-forest hover:text-white px-4 py-2"
                     >
                       Save team
-                    </button>
+                    </SubmitButton>
                   </form>
                 </details>
               </li>
@@ -994,12 +994,12 @@ function ClubRow({
               />
             </>
           )}
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="Saving…"
             className="rounded border border-forest bg-white text-forest text-sm font-medium hover:bg-forest hover:text-white px-4 py-2 sm:col-span-3 sm:w-fit"
           >
             Save club
-          </button>
+          </SubmitButton>
           <p className="text-xs text-zinc-500 sm:col-span-3">
             Changing the email resets the invite status. Click Send invite to
             email the new address. Their personal link does not change.
@@ -1092,12 +1092,12 @@ function FixtureTable({
                           defaultValue={displayTime ?? "19:00"}
                           className="rounded border border-zinc-300 px-2 py-1 text-xs"
                         />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Saving…"
                           className="text-xs text-forest hover:underline"
                         >
                           Save time
-                        </button>
+                        </SubmitButton>
                       </form>
                     </div>
                   ) : f.is_knocklyon_home ? (
