@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { getSupabase } from "../../_lib/supabase";
-import { proposeAwayDates, saveVenueDetails, confirmCupHomeDate } from "./actions";
+import { saveVenueDetails, confirmCupHomeDate } from "./actions";
+import AwayProposalFields from "./away-proposal-fields";
 import HomeCalendar from "./home-calendar";
 import SubmitButton from "../../_lib/submit-button";
-import { linkedTeamIds } from "../../_lib/notify";
+import { linkedTeamIds, knocklyonBusyDates } from "../../_lib/notify";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Schedule your fixtures — Knocklyon BC" };
@@ -39,32 +40,6 @@ type Fixture = {
   proposed_dates: unknown;
   secretary_confirmed_at?: string | null;
 };
-
-// Common badminton start times — noon to 10pm in 30-min steps
-// (afternoon slots for weekend fixtures, evenings for weeknights).
-const TIME_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "12:00", label: "12:00 PM (noon)" },
-  { value: "12:30", label: "12:30 PM" },
-  { value: "13:00", label: "1:00 PM" },
-  { value: "13:30", label: "1:30 PM" },
-  { value: "14:00", label: "2:00 PM" },
-  { value: "14:30", label: "2:30 PM" },
-  { value: "15:00", label: "3:00 PM" },
-  { value: "15:30", label: "3:30 PM" },
-  { value: "16:00", label: "4:00 PM" },
-  { value: "16:30", label: "4:30 PM" },
-  { value: "17:00", label: "5:00 PM" },
-  { value: "17:30", label: "5:30 PM" },
-  { value: "18:00", label: "6:00 PM" },
-  { value: "18:30", label: "6:30 PM" },
-  { value: "19:00", label: "7:00 PM" },
-  { value: "19:30", label: "7:30 PM" },
-  { value: "20:00", label: "8:00 PM" },
-  { value: "20:30", label: "8:30 PM" },
-  { value: "21:00", label: "9:00 PM" },
-  { value: "21:30", label: "9:30 PM" },
-  { value: "22:00", label: "10:00 PM" },
-];
 
 function parseProposed(raw: unknown): ProposedDate[] {
   if (!Array.isArray(raw)) return [];
@@ -109,6 +84,8 @@ export default async function SecretaryPage({
     .single<ClubJoined>();
 
   if (!club) notFound();
+
+  const busyDates = await knocklyonBusyDates(club.knocklyon_team_id);
 
   const [fixturesRes, teamSlotsRes, allFixturesRes] = await Promise.all([
     supabase
@@ -202,6 +179,7 @@ export default async function SecretaryPage({
         err={err}
         ok={ok}
         conflictDates={conflictDates}
+        busyDates={busyDates}
       />
     );
   }
@@ -340,6 +318,7 @@ export default async function SecretaryPage({
               note={club.secretary_note}
               venueLocation={club.venue_location}
               venueMapLink={club.venue_map_link}
+              busyDates={busyDates}
             />
           </div>
         )}
@@ -356,6 +335,7 @@ function CupView({
   err,
   ok,
   conflictDates,
+  busyDates,
 }: {
   club: ClubJoined;
   token: string;
@@ -364,6 +344,7 @@ function CupView({
   err?: string;
   ok?: string;
   conflictDates?: string;
+  busyDates: string[];
 }) {
   const knocklyonLabel = `Knocklyon${
     club.knocklyon_teams?.name ? ` ${club.knocklyon_teams.name}` : ""
@@ -499,6 +480,7 @@ function CupView({
               note={club.secretary_note}
               venueLocation={club.venue_location}
               venueMapLink={club.venue_map_link}
+              busyDates={busyDates}
             />
           </div>
         )}
@@ -603,32 +585,6 @@ function ConfirmedCard({
   );
 }
 
-function TimeSelect({
-  name,
-  defaultValue,
-  required = false,
-}: {
-  name: string;
-  defaultValue?: string | null;
-  required?: boolean;
-}) {
-  const preset = defaultValue ?? "19:00";
-  return (
-    <select
-      name={name}
-      defaultValue={preset}
-      required={required}
-      className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm bg-white"
-    >
-      {TIME_OPTIONS.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function VenueForm({
   token,
   location,
@@ -691,12 +647,14 @@ function AwayProposalForm({
   note,
   venueLocation,
   venueMapLink,
+  busyDates,
 }: {
   token: string;
   proposed: ProposedDate[];
   note: string | null;
   venueLocation: string | null;
   venueMapLink: string | null;
+  busyDates: string[];
 }) {
   const alreadyProposed = proposed.length >= 2;
   const [p1, p2] = proposed;
@@ -722,109 +680,15 @@ function AwayProposalForm({
           </div>
         </div>
       )}
-      <form action={proposeAwayDates} className="space-y-4">
-        <input type="hidden" name="token" value={token} />
-        <p className="text-sm text-zinc-700">
-          Suggest <strong>two dates and start times</strong> when you can host
-          Knocklyon at your venue.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
-              Option 1
-            </div>
-            <label className="block">
-              <span className="text-xs text-zinc-600">Date</span>
-              <input
-                type="date"
-                name="date1"
-                defaultValue={p1?.date}
-                required
-                className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm bg-white"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-zinc-600">Start time</span>
-              <TimeSelect name="time1" defaultValue={p1?.time} required />
-            </label>
-          </div>
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
-              Option 2
-            </div>
-            <label className="block">
-              <span className="text-xs text-zinc-600">Date</span>
-              <input
-                type="date"
-                name="date2"
-                defaultValue={p2?.date}
-                required
-                className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm bg-white"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-zinc-600">Start time</span>
-              <TimeSelect name="time2" defaultValue={p2?.time} required />
-            </label>
-          </div>
-        </div>
-
-        <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
-            Your venue
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-xs text-zinc-600">Venue name and location</span>
-              <input
-                type="text"
-                name="venue_location"
-                defaultValue={venueLocation ?? ""}
-                required
-                placeholder="e.g. St Andrews Sports Centre, Booterstown"
-                className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm bg-white"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-zinc-600">
-                Google Maps link <span className="text-zinc-400">(optional)</span>
-              </span>
-              <input
-                type="url"
-                name="venue_map_link"
-                defaultValue={venueMapLink ?? ""}
-                placeholder="https://maps.google.com/…"
-                className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm bg-white"
-              />
-            </label>
-          </div>
-        </div>
-
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800">
-            Additional comment or message{" "}
-            <span className="font-normal text-zinc-500">(optional)</span>
-          </span>
-          <span className="mt-0.5 block text-xs text-zinc-500">
-            Anything Knocklyon should know about your dates or venue? Include
-            it here and we&rsquo;ll see it when we pick a date.
-          </span>
-          <textarea
-            name="note"
-            defaultValue={note ?? ""}
-            rows={3}
-            placeholder="e.g. The first date is preferred; the second is tight but doable."
-            className="mt-2 w-full rounded border border-zinc-300 px-3 py-2 text-sm resize-y"
-          />
-        </label>
-
-        <SubmitButton
-          className="rounded bg-forest px-4 py-2 text-white text-sm hover:bg-forest-dark"
-          pendingLabel={alreadyProposed ? "Updating…" : "Submitting…"}
-        >
-          {alreadyProposed ? "Update proposal" : "Submit proposal"}
-        </SubmitButton>
-      </form>
+      <AwayProposalFields
+        token={token}
+        proposed={proposed}
+        note={note}
+        venueLocation={venueLocation}
+        venueMapLink={venueMapLink}
+        busyDates={busyDates}
+        alreadyProposed={alreadyProposed}
+      />
     </div>
   );
 }

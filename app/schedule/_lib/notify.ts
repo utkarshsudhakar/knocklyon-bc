@@ -87,6 +87,36 @@ export async function findKnocklyonTeamMatchConflict(
   return homeHit?.length ? describe(homeHit[0].opponent_club_id) : null;
 }
 
+/** Dates (YYYY-MM-DD) where this team, or a team sharing players, has a confirmed match. */
+export async function knocklyonBusyDates(
+  teamId: string | null
+): Promise<string[]> {
+  if (!teamId) return [];
+  const supabase = getSupabase();
+  const { data: clubs } = await supabase
+    .from("clubs")
+    .select("id")
+    .in("knocklyon_team_id", await linkedTeamIds(teamId));
+  const clubIds = (clubs ?? []).map((c) => c.id as string);
+  if (clubIds.length === 0) return [];
+
+  const { data: fixtures } = await supabase
+    .from("fixtures")
+    .select("confirmed_date, home_slots:confirmed_slot_id(slot_date)")
+    .in("opponent_club_id", clubIds)
+    .eq("status", "confirmed");
+
+  const dates = new Set<string>();
+  for (const f of (fixtures ?? []) as unknown as Array<{
+    confirmed_date: string | null;
+    home_slots: { slot_date: string } | null;
+  }>) {
+    if (f.confirmed_date) dates.add(f.confirmed_date);
+    if (f.home_slots?.slot_date) dates.add(f.home_slots.slot_date);
+  }
+  return [...dates].sort();
+}
+
 export async function dateHasKnocklyonTeamMatch(
   teamId: string | null,
   date: string

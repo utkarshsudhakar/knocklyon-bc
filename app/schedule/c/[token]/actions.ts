@@ -93,7 +93,21 @@ export async function bookHomeDate(formData: FormData) {
   redirect(`/schedule/c/${token}?ok=home_booked`);
 }
 
-export async function proposeAwayDates(formData: FormData) {
+export type ProposeState = { error?: string };
+
+function longDate(iso: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-IE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export async function proposeAwayDates(
+  _prev: ProposeState,
+  formData: FormData
+): Promise<ProposeState> {
   const token = (formData.get("token") as string) ?? "";
   const date1 = ((formData.get("date1") as string) ?? "").trim();
   const time1 = ((formData.get("time1") as string) ?? "").trim();
@@ -104,15 +118,20 @@ export async function proposeAwayDates(formData: FormData) {
   const venueMapLink = ((formData.get("venue_map_link") as string) ?? "").trim() || null;
 
   if (!token) redirect(`/schedule/c/${token}?err=invalid`);
-  if (!venueLocation) redirect(`/schedule/c/${token}?err=need_venue`);
+  if (!venueLocation) {
+    return {
+      error:
+        "Please enter your venue name so our captain knows where the match is.",
+    };
+  }
   if (!date1 || !date2) {
-    redirect(`/schedule/c/${token}?err=need_two_dates`);
+    return { error: "Please pick two dates for your away proposal." };
   }
   if (!time1 || !time2) {
-    redirect(`/schedule/c/${token}?err=need_times`);
+    return { error: "Please pick a start time for each proposed date." };
   }
   if (date1 === date2) {
-    redirect(`/schedule/c/${token}?err=duplicate_dates`);
+    return { error: "Please pick two different dates." };
   }
 
   const supabase = getSupabase();
@@ -139,8 +158,11 @@ export async function proposeAwayDates(formData: FormData) {
   }
 
   if (conflicts.length > 0) {
-    const q = encodeURIComponent(conflicts.join(","));
-    redirect(`/schedule/c/${token}?err=knocklyon_conflict&dates=${q}`);
+    return {
+      error: `Sorry, Knocklyon already has a match scheduled on ${conflicts
+        .map(longDate)
+        .join(" and ")}. Please pick another date.`,
+    };
   }
 
   const proposed = [
@@ -155,7 +177,7 @@ export async function proposeAwayDates(formData: FormData) {
 
   if (error) {
     console.error("[proposeAwayDates] update error:", error);
-    redirect(`/schedule/c/${token}?err=save_failed`);
+    return { error: "Something went wrong saving your proposal. Please try again." };
   }
 
   // Save the note alongside the proposal

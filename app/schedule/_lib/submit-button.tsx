@@ -17,14 +17,17 @@ export default function SubmitButton({
   className,
   disabled = false,
   confirmMessage,
+  pending: pendingProp,
 }: {
   children: ReactNode;
   pendingLabel?: ReactNode;
   className?: string;
   disabled?: boolean;
   confirmMessage?: string;
+  pending?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const pending = pendingProp ?? status.pending;
   const isDisabled = disabled || pending;
 
   return (
