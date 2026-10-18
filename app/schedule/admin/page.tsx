@@ -1,6 +1,7 @@
 import TimeSlotSelect from "../_lib/time-slot-select";
 import CourtBookings from "./court-bookings";
 import TeamTab from "./team-tab";
+import Overview from "./overview";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { getSupabase } from "../_lib/supabase";
@@ -130,6 +131,8 @@ export default async function AdminPage({
     team_name?: string;
     reason?: string;
     courtPage?: string;
+    show?: string;
+    q?: string;
   }>;
 }) {
   if (!(await isAdmin())) return <LoginForm />;
@@ -368,6 +371,12 @@ export default async function AdminPage({
           aria-label="Teams"
           className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-white/85 backdrop-blur border-b border-zinc-200 flex flex-wrap gap-2"
         >
+          <TeamTab
+            href="/schedule/admin"
+            active={!selectedTeam}
+            name="Overview"
+            division={null}
+          />
           {teamsList.map((t) => {
             const active = t.id === selectedTeamId;
             return (
@@ -389,10 +398,11 @@ export default async function AdminPage({
           Add at least one Knocklyon team above to get started.
         </p>
       ) : !selectedTeam ? (
-        <p className="text-sm text-zinc-500 italic">
-          Pick a team above to see its opposing clubs, home dates, and
-          fixtures.
-        </p>
+        <Overview
+          teams={teamsList.map((t) => ({ id: t.id, name: t.name }))}
+          show={params.show === "all" ? "all" : "attention"}
+          query={params.q ?? ""}
+        />
       ) : (
         <TeamPanel key={selectedTeam.id} team={selectedTeam} seasonFolder={seasonFolder} />
       )}
