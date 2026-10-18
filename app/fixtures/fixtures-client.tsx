@@ -323,6 +323,8 @@ function SubscribeBar({ team }: { team: string }) {
 
 // ─── list view ───────────────────────────────────────────────────────────────
 
+const UPCOMING_PAGE = 5;
+
 function FixtureRow({ fixture, past }: { fixture: Fixture; past: boolean }) {
   const dt = fmt(fixture.date);
   const home = fixture.home_team ?? "KBC";
@@ -589,6 +591,7 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
 
   const [view, setView] = useState<"list" | "calendar">("list");
   const [team, setTeam] = useState("all");
+  const [upcomingShown, setUpcomingShown] = useState(UPCOMING_PAGE);
   const [season, setSeason] = useState<string>(
     currentSeason ?? seasons[0] ?? "",
   );
@@ -618,7 +621,7 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
             {seasons.map((s) => (
               <button
                 key={s}
-                onClick={() => { setSeason(s); setTeam("all"); }}
+                onClick={() => { setSeason(s); setTeam("all"); setUpcomingShown(UPCOMING_PAGE); }}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                   season === s
                     ? "bg-stone-800 text-white"
@@ -668,7 +671,7 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
               {["all", ...teams].map(t => (
                 <button
                   key={t}
-                  onClick={() => setTeam(t)}
+                  onClick={() => { setTeam(t); setUpcomingShown(UPCOMING_PAGE); }}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                     team === t
                       ? "bg-forest text-white"
@@ -699,8 +702,17 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
               </div>
             ) : (
               <div className="mt-4 space-y-3">
-                {upcoming.map(f => <FixtureRow key={f.id} fixture={f} past={false} />)}
+                {upcoming.slice(0, upcomingShown).map(f => <FixtureRow key={f.id} fixture={f} past={false} />)}
               </div>
+            )}
+            {upcoming.length > upcomingShown && (
+              <button
+                type="button"
+                onClick={() => setUpcomingShown(n => n + UPCOMING_PAGE)}
+                className="mt-4 w-full rounded-2xl border border-stone-200 bg-white py-3 text-sm font-semibold text-forest transition hover:border-forest"
+              >
+                Show {Math.min(UPCOMING_PAGE, upcoming.length - upcomingShown)} more ({upcoming.length - upcomingShown} remaining)
+              </button>
             )}
 
             {past.length > 0 && (
