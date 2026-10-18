@@ -1,6 +1,7 @@
 import { getSupabase } from "./supabase";
 import { confirmationEmailHtml, captainHomeDatesAddedEmailHtml, secretaryFixtureUpdateEmailHtml, captainDatesOfferedEmailHtml, cupConfirmationEmailHtml, formatDateLong, formatTimeFriendly } from "./email-templates";
 import { SITE_URL } from "../../site-url";
+import { tooCloseDate } from "./gap";
 import {
   generateIcs,
   googleCalendarLink,
@@ -115,6 +116,69 @@ export async function knocklyonBusyDates(
     if (f.home_slots?.slot_date) dates.add(f.home_slots.slot_date);
   }
   return [...dates].sort();
+}
+
+export type ConfirmedMatch = {
+  fixtureId: string;
+  date: string;
+  teamName: string;
+  opponent: string;
+};
+
+/** Confirmed matches for this team and any team sharing players with it. */
+export async function knocklyonConfirmedMatches(
+  teamId: string | null
+): Promise<ConfirmedMatch[]> {
+  if (!teamId) return [];
+  const supabase = getSupabase();
+  const { data: clubs } = await supabase
+    .from("clubs")
+    .select("id, name, team_name, knocklyon_teams(name)")
+    .in("knocklyon_team_id", await linkedTeamIds(teamId));
+  const byClub = new Map(
+    ((clubs ?? []) as unknown as Array<{
+      id: string;
+      name: string;
+      team_name: string | null;
+      knocklyon_teams: { name: string } | null;
+    }>).map((c) => [c.id, c])
+  );
+  if (byClub.size === 0) return [];
+
+  const { data: fixtures } = await supabase
+    .from("fixtures")
+    .select("id, opponent_club_id, confirmed_date, home_slots:confirmed_slot_id(slot_date)")
+    .in("opponent_club_id", [...byClub.keys()])
+    .eq("status", "confirmed");
+
+  const out: ConfirmedMatch[] = [];
+  for (const f of (fixtures ?? []) as unknown as Array<{
+    id: string;
+    opponent_club_id: string;
+    confirmed_date: string | null;
+    home_slots: { slot_date: string } | null;
+  }>) {
+    const date = f.confirmed_date ?? f.home_slots?.slot_date ?? null;
+    const club = byClub.get(f.opponent_club_id);
+    if (!date || !club) continue;
+    out.push({
+      fixtureId: f.id,
+      date,
+      teamName: club.knocklyon_teams?.name ?? "this team",
+      opponent: club.team_name ? `${club.name} ${club.team_name}` : club.name,
+    });
+  }
+  return out;
+}
+
+/** A confirmed match on a different day but closer than MIN_GAP_DAYS to `date`. */
+export async function findNearbyKnocklyonMatch(
+  teamId: string | null,
+  date: string
+): Promise<ConfirmedMatch | null> {
+  if (!date) return null;
+  const matches = await knocklyonConfirmedMatches(teamId);
+  return matches.find((m) => tooCloseDate(date, [m.date])) ?? null;
 }
 
 export async function dateHasKnocklyonTeamMatch(

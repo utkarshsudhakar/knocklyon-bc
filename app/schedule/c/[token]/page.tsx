@@ -1,3 +1,4 @@
+import { tooCloseDate } from "../../_lib/gap";
 import { notFound } from "next/navigation";
 import { getSupabase } from "../../_lib/supabase";
 import { saveVenueDetails, confirmCupHomeDate } from "./actions";
@@ -151,11 +152,13 @@ export default async function SecretaryPage({
     const capacityLeft = (bookingsPerSlot.get(s.id) ?? 0) < s.capacity;
     const teamAlreadyHome = teamBlockedSlotIds.has(s.id);
     const teamAlreadyAway = teamBlockedAwayDates.has(s.slot_date);
+    const tooClose = tooCloseDate(s.slot_date, busyDates) !== null;
     return {
       id: s.id,
       slot_date: s.slot_date,
       match_time: s.match_time,
-      is_available: capacityLeft && !teamAlreadyHome && !teamAlreadyAway,
+      is_available:
+        capacityLeft && !teamAlreadyHome && !teamAlreadyAway && !tooClose,
     };
   });
 

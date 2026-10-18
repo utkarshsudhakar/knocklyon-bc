@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSupabase } from "../_lib/supabase";
+import { MIN_GAP_DAYS, daysBetween } from "../_lib/gap";
 
 type Props = {
   teams: { id: string; name: string }[];
@@ -111,7 +112,7 @@ function StatusCell({ cell }: { cell: Cell | null }) {
 
 export default async function Overview({ teams, show, query }: Props) {
   const supabase = getSupabase();
-  const [{ data: clubData }, { data: fixtureData }] = await Promise.all([
+  const [{ data: clubData }, { data: fixtureData }, { data: conflictData }] = await Promise.all([
     supabase
       .from("clubs")
       .select(
@@ -119,6 +120,7 @@ export default async function Overview({ teams, show, query }: Props) {
       )
       .order("name"),
     supabase.from("fixtures").select("*"),
+    supabase.from("team_conflicts").select("team_a, team_b"),
   ]);
   const clubs = (clubData ?? []) as ClubRow[];
   const fixtures = (fixtureData ?? []) as FixtureRow[];
@@ -148,6 +150,81 @@ export default async function Overview({ teams, show, query }: Props) {
       : f.confirmed_date;
 
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
+
+  type Played = {
+    fixtureId: string;
+    teamId: string;
+    date: string;
+    home: boolean;
+    opponent: string;
+  };
+  const played: Played[] = [];
+  for (const f of fixtures) {
+    const club = clubs.find((c) => c.id === f.opponent_club_id);
+    if (!club?.knocklyon_team_id || f.status !== "confirmed") continue;
+    if (club.competition === "cup" && f.is_knocklyon_home && !f.secretary_confirmed_at) continue;
+    const date = dateOf(f);
+    if (!date) continue;
+    played.push({
+      fixtureId: f.id,
+      teamId: club.knocklyon_team_id,
+      date,
+      home: f.is_knocklyon_home,
+      opponent: club.team_name ? `${club.name} ${club.team_name}` : club.name,
+    });
+  }
+  const linkedPairs = new Set(
+    ((conflictData ?? []) as { team_a: string; team_b: string }[]).map(
+      (r) => `${r.team_a}|${r.team_b}`
+    )
+  );
+  const clashes: { a: Played; b: Played; gap: number; linked: boolean }[] = [];
+  for (let i = 0; i < played.length; i++) {
+    for (let j = i + 1; j < played.length; j++) {
+      const a = played[i];
+      const b = played[j];
+      const linked = a.teamId !== b.teamId;
+      if (linked && !linkedPairs.has(`${a.teamId}|${b.teamId}`)) continue;
+      const gap = daysBetween(a.date, b.date);
+      if (gap >= MIN_GAP_DAYS) continue;
+      clashes.push(a.date <= b.date ? { a, b, gap, linked } : { a: b, b: a, gap, linked });
+    }
+  }
+  clashes.sort((x, y) => x.gap - y.gap || x.a.date.localeCompare(y.a.date));
+  type ClashGroup = {
+    key: string;
+    teamIds: string[];
+    clashCount: number;
+    runs: { entries: Played[]; gaps: number[] }[];
+  };
+  const groupMap = new Map<string, { teamIds: string[]; clashCount: number; entries: Map<string, Played> }>();
+  for (const c of clashes) {
+    const teamIds = [...new Set([c.a.teamId, c.b.teamId])].sort();
+    const key = teamIds.join("+");
+    const g = groupMap.get(key) ?? { teamIds, clashCount: 0, entries: new Map() };
+    g.clashCount += 1;
+    g.entries.set(c.a.fixtureId, c.a);
+    g.entries.set(c.b.fixtureId, c.b);
+    groupMap.set(key, g);
+  }
+  const clashGroups: ClashGroup[] = [...groupMap.entries()]
+    .map(([key, g]) => {
+      const sorted = [...g.entries.values()].sort((x, y) => x.date.localeCompare(y.date));
+      const runs: ClashGroup["runs"] = [];
+      for (const m of sorted) {
+        const run = runs[runs.length - 1];
+        const prev = run?.entries[run.entries.length - 1];
+        const gap = prev ? daysBetween(prev.date, m.date) : null;
+        if (run && gap !== null && gap < MIN_GAP_DAYS) {
+          run.entries.push(m);
+          run.gaps.push(gap);
+        } else {
+          runs.push({ entries: [m], gaps: [] });
+        }
+      }
+      return { key, teamIds: g.teamIds, clashCount: g.clashCount, runs };
+    })
+    .sort((x, y) => y.clashCount - x.clashCount);
 
   type Matchup = {
     club: ClubRow;
@@ -198,6 +275,96 @@ export default async function Overview({ teams, show, query }: Props) {
 
   return (
     <section className="space-y-4">
+      {clashes.length > 0 && (
+        <details className="group rounded-xl border border-amber-300 bg-amber-50">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+            <div>
+              <span className="text-sm font-semibold text-amber-900">
+                Back-to-back matches ({clashes.length})
+              </span>
+              <span className="ml-2 text-xs text-amber-800">
+                Confirmed matches less than {MIN_GAP_DAYS} days apart for the
+                same team or teams sharing players.
+              </span>
+            </div>
+            <span className="text-xs text-amber-800 group-open:hidden">Expand</span>
+            <span className="hidden text-xs text-amber-800 group-open:inline">Collapse</span>
+          </summary>
+          <div className="space-y-3 px-4 pb-4">
+            {clashGroups.map((g) => {
+              const names = g.teamIds.map((id) => teamName.get(id) ?? "?");
+              return (
+                <div key={g.key} className="rounded-lg border border-zinc-200 bg-white p-3">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-zinc-900">{names.join(" + ")}</span>
+                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
+                      {g.clashCount} clash{g.clashCount === 1 ? "" : "es"}
+                    </span>
+                    {g.teamIds.length > 1 && (
+                      <span className="text-xs text-zinc-500">These teams share players</span>
+                    )}
+                    <span className="ml-auto flex gap-3 text-xs">
+                      {g.teamIds.map((id) => (
+                        <Link key={id} href={`/schedule/admin?team=${id}`} className="text-forest hover:underline">
+                          Open {teamName.get(id)} &rarr;
+                        </Link>
+                      ))}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {g.runs.map((run, ri) => (
+                      <div key={ri} className="flex flex-wrap items-stretch gap-y-2">
+                        {run.entries.map((m, mi) => (
+                          <div key={m.fixtureId} className="flex items-center">
+                            {mi > 0 && (
+                              <div className="flex items-center px-1">
+                                <span className="w-3 border-t-2 border-dashed border-zinc-300" />
+                                <span
+                                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold whitespace-nowrap ${
+                                    run.gaps[mi - 1] <= 1
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-amber-100 text-amber-800"
+                                  }`}
+                                >
+                                  {run.gaps[mi - 1] === 0
+                                    ? "same day"
+                                    : `${run.gaps[mi - 1]} day${run.gaps[mi - 1] === 1 ? "" : "s"}`}
+                                </span>
+                                <span className="w-3 border-t-2 border-dashed border-zinc-300" />
+                              </div>
+                            )}
+                            <div className="min-w-[180px] rounded-lg border border-zinc-200 px-3 py-2">
+                              <div className="text-sm font-bold text-zinc-900">
+                                {formatDay(m.date, null)}
+                                {g.teamIds.length > 1 && (
+                                  <span className="ml-1 font-normal text-zinc-500">
+                                    &middot; {teamName.get(m.teamId)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-zinc-700">
+                                <span
+                                  className={`mr-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                    m.home ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+                                  }`}
+                                >
+                                  {m.home ? "Home" : "Away"}
+                                </span>
+                                {m.opponent}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-zinc-900">Overview</h2>

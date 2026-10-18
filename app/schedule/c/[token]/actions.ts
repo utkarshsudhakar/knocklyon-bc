@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSupabase } from "../../_lib/supabase";
 import {
   dateHasKnocklyonTeamMatch,
+  findNearbyKnocklyonMatch,
   notifyClubAwayDatesProposed,
   notifyCaptainAwayDatesOffered,
   notifyClubHomeDatePicked,
@@ -48,6 +49,18 @@ export async function bookHomeDate(formData: FormData) {
     !fixture.is_knocklyon_home
   ) {
     redirect(`/schedule/c/${token}?err=invalid`);
+  }
+
+  const { data: chosenSlot } = await supabase
+    .from("home_slots")
+    .select("slot_date")
+    .eq("id", slotId)
+    .single();
+  if (
+    chosenSlot &&
+    (await findNearbyKnocklyonMatch(club.knocklyon_team_id, chosenSlot.slot_date))
+  ) {
+    redirect(`/schedule/c/${token}?err=team_conflict`);
   }
 
   const { error } = await supabase.rpc("book_slot", {
@@ -152,7 +165,10 @@ export async function proposeAwayDates(
 
   const conflicts: string[] = [];
   for (const d of [date1, date2]) {
-    if (await dateHasKnocklyonTeamMatch(club.knocklyon_team_id, d)) {
+    if (
+      (await dateHasKnocklyonTeamMatch(club.knocklyon_team_id, d)) ||
+      (await findNearbyKnocklyonMatch(club.knocklyon_team_id, d))
+    ) {
       conflicts.push(d);
     }
   }
@@ -164,6 +180,7 @@ export async function proposeAwayDates(
         .join(" and ")}. Please pick another date.`,
     };
   }
+
 
   const proposed = [
     { date: date1, time: time1 },

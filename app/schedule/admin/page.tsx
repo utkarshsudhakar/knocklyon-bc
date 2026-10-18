@@ -1,6 +1,8 @@
 import TimeSlotSelect from "../_lib/time-slot-select";
 import CourtBookings from "./court-bookings";
 import TeamTab from "./team-tab";
+import NearDateForm, { type NearMatch } from "./near-date-form";
+import { knocklyonConfirmedMatches } from "../_lib/notify";
 import Overview from "./overview";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -446,6 +448,8 @@ async function TeamPanel({
     supabase.from("fixtures").select("confirmed_slot_id, status"),
   ]);
 
+  const nearMatches: NearMatch[] = await knocklyonConfirmedMatches(team.id);
+
   const { data: contacts } = await supabase
     .from("club_contacts")
     .select("id, name, email")
@@ -691,6 +695,7 @@ async function TeamPanel({
                   (f) => f.opponent_club_id === c.id
                 )}
                 slotById={slotById}
+                nearMatches={nearMatches}
               />
             ))}
           </ul>
@@ -723,6 +728,7 @@ async function TeamPanel({
               clubById={clubById}
               slotById={slotById}
               team={team}
+              nearMatches={nearMatches}
             />
           )}
         </div>
@@ -744,6 +750,7 @@ async function TeamPanel({
               clubById={clubById}
               slotById={slotById}
               team={team}
+              nearMatches={nearMatches}
             />
           </div>
         )}
@@ -829,11 +836,13 @@ function ClubRow({
   cupHome,
   cupFixture,
   slotById,
+  nearMatches = [],
 }: {
   club: Club;
   cupHome?: boolean;
   cupFixture?: Fixture;
   slotById?: Map<string, Slot>;
+  nearMatches?: NearMatch[];
 }) {
   const isCup = club.competition === "cup";
   const cupDate = cupFixture?.confirmed_slot_id
@@ -906,7 +915,12 @@ function ClubRow({
                   )}
                 </div>
               )}
-              <form action={setCupHomeDate} className="flex flex-wrap items-center gap-2">
+              <NearDateForm
+                action={setCupHomeDate}
+                matches={nearMatches}
+                excludeFixtureId={cupFixture?.id}
+                className="flex flex-wrap items-center gap-2"
+              >
                 <input type="hidden" name="id" value={club.id} />
                 <input
                   type="date"
@@ -923,7 +937,7 @@ function ClubRow({
                 <SubmitButton className="text-xs text-forest hover:underline" pendingLabel="Saving…">
                   {cupDate ? "Change date" : "Set date"}
                 </SubmitButton>
-              </form>
+              </NearDateForm>
             </div>
           )}
           {!isCup && (
@@ -1037,11 +1051,13 @@ function FixtureTable({
   clubById,
   slotById,
   team,
+  nearMatches,
 }: {
   fixtures: Fixture[];
   clubById: Map<string, Club>;
   slotById: Map<string, Slot>;
   team: KnocklyonTeam;
+  nearMatches: NearMatch[];
 }) {
   const knocklyonLabel = `Knocklyon ${team.name}`;
   return (
@@ -1122,9 +1138,11 @@ function FixtureTable({
                     <div className="space-y-2">
                       <div className="text-xs text-zinc-500">Proposed:</div>
                       {proposed.map((p) => (
-                        <form
+                        <NearDateForm
                           key={p.date}
                           action={acceptProposedDate}
+                          matches={nearMatches}
+                          excludeFixtureId={f.id}
                           className="flex items-center gap-3 rounded border border-zinc-200 bg-white px-2 py-1.5"
                         >
                           <input
@@ -1158,13 +1176,13 @@ function FixtureTable({
                           >
                             Accept
                           </SubmitButton>
-                        </form>
+                        </NearDateForm>
                       ))}
                       <details className="mt-1">
                         <summary className="text-xs text-zinc-400 cursor-pointer">
                           Or set a different date/time
                         </summary>
-                        <ManualAwayDateForm fixtureId={f.id} />
+                        <ManualAwayDateForm fixtureId={f.id} nearMatches={nearMatches} />
                       </details>
                     </div>
                   ) : (
@@ -1176,7 +1194,7 @@ function FixtureTable({
                         <summary className="text-xs text-zinc-400 cursor-pointer">
                           Set date manually
                         </summary>
-                        <ManualAwayDateForm fixtureId={f.id} />
+                        <ManualAwayDateForm fixtureId={f.id} nearMatches={nearMatches} />
                       </details>
                     </div>
                   )}
@@ -1204,10 +1222,18 @@ function FixtureTable({
   );
 }
 
-function ManualAwayDateForm({ fixtureId }: { fixtureId: string }) {
+function ManualAwayDateForm({
+  fixtureId,
+  nearMatches,
+}: {
+  fixtureId: string;
+  nearMatches: NearMatch[];
+}) {
   return (
-    <form
+    <NearDateForm
       action={setAwayDate}
+      matches={nearMatches}
+      excludeFixtureId={fixtureId}
       className="mt-1 flex flex-wrap items-center gap-2"
     >
       <input type="hidden" name="fixture_id" value={fixtureId} />
@@ -1228,7 +1254,7 @@ function ManualAwayDateForm({ fixtureId }: { fixtureId: string }) {
       >
         Set
       </SubmitButton>
-    </form>
+    </NearDateForm>
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useMemo, useState } from "react";
 import SubmitButton from "../../_lib/submit-button";
+import { tooCloseDate } from "../../_lib/gap";
 import { proposeAwayDates, type ProposeState } from "./actions";
 
 type Proposed = { date: string; time: string | null };
@@ -65,8 +66,10 @@ export default function AwayProposalFields({
   );
 
   const busy = useMemo(() => new Set(busyDates), [busyDates]);
-  const busy1 = Boolean(date1) && busy.has(date1);
-  const busy2 = Boolean(date2) && busy.has(date2);
+  const busy1 =
+    Boolean(date1) && (busy.has(date1) || tooCloseDate(date1, busyDates) !== null);
+  const busy2 =
+    Boolean(date2) && (busy.has(date2) || tooCloseDate(date2, busyDates) !== null);
   const same = Boolean(date1) && date1 === date2;
   const blocked = busy1 || busy2 || same;
 
