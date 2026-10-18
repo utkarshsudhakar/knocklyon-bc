@@ -579,6 +579,10 @@ function CalendarView({ fixtures }: { fixtures: Fixture[] }) {
           Upcoming fixture
         </span>
         <span className="flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-purple-200" />
+          Cup match
+        </span>
+        <span className="flex items-center gap-1">
           <span className="inline-block h-2.5 w-2.5 rounded-sm bg-stone-200" />
           Past fixture
         </span>
