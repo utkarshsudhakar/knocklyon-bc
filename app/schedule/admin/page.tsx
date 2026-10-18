@@ -1175,12 +1175,13 @@ function FixtureTable({
                   {f.status === "confirmed" && (
                     <form action={resetFixture}>
                       <input type="hidden" name="fixture_id" value={f.id} />
-                      <button
-                        type="submit"
+                      <SubmitButton
+                        pendingLabel="Resetting…"
+                        confirmMessage="Reset this confirmed date? The match goes back to awaiting a date and the secretary will need to choose again."
                         className="text-sm text-zinc-500 hover:text-red-600"
                       >
                         Reset
-                      </button>
+                      </SubmitButton>
                     </form>
                   )}
                 </td>
@@ -1211,12 +1212,12 @@ function ManualAwayDateForm({ fixtureId }: { fixtureId: string }) {
         defaultValue="19:00"
         className="rounded border border-zinc-300 px-2 py-1 text-xs"
       />
-      <button
-        type="submit"
+      <SubmitButton
+        pendingLabel="Setting…"
         className="text-xs text-forest hover:underline"
       >
         Set
-      </button>
+      </SubmitButton>
     </form>
   );
 }
