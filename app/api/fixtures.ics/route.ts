@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     .map((f) => {
       const start = new Date(f.date);
       const end = new Date(start.getTime() + 90 * 60 * 1000); // default 90-min duration
-      const summary = `${f.home_team ?? "KBC"} vs ${f.opponent ?? "TBD"}`;
+      const summary = `${f.home_team ?? "KBC"} vs ${f.opponent ?? "TBD"}${f.competition === "cup" ? " [CUP match]" : ""}`;
       const description = [
         f.venue ? `${f.venue} fixture` : "",
         f.result ? `Result: ${f.result}` : "",

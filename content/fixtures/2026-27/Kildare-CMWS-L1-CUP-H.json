@@ -1,7 +1,8 @@
 {
   "date": "2026-11-16T20:00:00.000Z",
   "home_team": "Ladies 1",
-  "opponent": "Kildare CMWS L1 [CUP match]",
+  "opponent": "Kildare CMWS L1",
+  "competition": "cup",
   "venue": "Home",
   "location": "Knocklyon Community Centre",
   "map_link": "https://maps.app.goo.gl/HS4AEDRtxXVa3j6c6",

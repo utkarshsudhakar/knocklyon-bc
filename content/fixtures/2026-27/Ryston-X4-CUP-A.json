@@ -1,7 +1,8 @@
 {
   "date": "2026-11-22T19:00:00.000Z",
   "home_team": "Mixed 2",
-  "opponent": "Ryston X4 [CUP match]",
+  "opponent": "Ryston X4",
+  "competition": "cup",
   "venue": "Away",
   "location": "Ryston Sports & Social Club, Newbridge",
   "map_link": "https://maps.app.goo.gl/WBb7iUFtqRa6ivJFA",

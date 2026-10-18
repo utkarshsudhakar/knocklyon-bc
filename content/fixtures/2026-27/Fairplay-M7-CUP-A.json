@@ -1,7 +1,8 @@
 {
   "date": "2026-10-22T19:00:00.000Z",
   "home_team": "Men's 4",
-  "opponent": "Fairplay M7 [CUP match]",
+  "opponent": "Fairplay M7",
+  "competition": "cup",
   "venue": "Away",
   "location": "St. Vincent's Secondary School, D11PA00",
   "map_link": "https://maps.app.goo.gl/qKtdVjwvqVzjqvtw5",

@@ -1,7 +1,8 @@
 {
   "date": "2026-10-23T18:00:00.000Z",
   "home_team": "Ladies 2",
-  "opponent": "ESB L2 [CUP match]",
+  "opponent": "ESB L2",
+  "competition": "cup",
   "venue": "Away",
   "location": "Marian College D04W268",
   "map_link": "https://maps.app.goo.gl/vbFfFdTuPNMjjtm88",

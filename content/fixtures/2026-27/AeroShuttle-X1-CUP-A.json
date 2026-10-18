@@ -1,7 +1,8 @@
 {
   "date": "2026-10-28T20:00:00.000Z",
   "home_team": "Mixed 5",
-  "opponent": "AeroShuttle X1 [CUP match]",
+  "opponent": "AeroShuttle X1",
+  "competition": "cup",
   "venue": "Away",
   "location": "Old Bawn Community School,Tallaght D24HP38",
   "map_link": "https://maps.app.goo.gl/EYrmMZpNnfiCUUwJ8",

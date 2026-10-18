@@ -1260,7 +1260,7 @@ function ExportPanel({
         ? `${opponent.name} ${opponent.team_name}`
         : opponent.name
       : "?";
-    const opponentLabel = isCupTie ? `${baseLabel} [CUP match]` : baseLabel;
+    const opponentLabel = baseLabel;
     const date = f.is_knocklyon_home
       ? f.confirmed_slot_id
         ? slotById.get(f.confirmed_slot_id)?.slot_date ?? null
@@ -1293,6 +1293,7 @@ function ExportPanel({
       date: isoDate,
       home_team: teamDisplayName,
       opponent: opponentLabel,
+      competition: isCupTie ? "cup" : "league",
       venue,
       location,
       map_link: mapLink,

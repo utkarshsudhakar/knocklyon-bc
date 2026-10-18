@@ -200,6 +200,7 @@ type Fixture = {
   date: string;
   home_team?: string | null;
   opponent: string;
+  competition?: string | null;
   venue: string;
   location?: string | null;
   map_link?: string | null;
@@ -341,6 +342,11 @@ function FixtureRow({ fixture, past }: { fixture: Fixture; past: boolean }) {
           <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${fixture.venue === "Home" ? "bg-green-100 text-forest" : "bg-amber-100 text-amber-800"}`}>
             {fixture.venue}
           </span>
+          {fixture.competition === "cup" && (
+            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800">
+              Cup
+            </span>
+          )}
           <span className="text-xs text-stone-400">{dt.time}</span>
         </div>
         <p className="text-base font-bold text-stone-900">
@@ -493,10 +499,12 @@ function CalendarView({ fixtures }: { fixtures: Fixture[] }) {
                         className={`truncate rounded px-1 py-0.5 text-[9px] font-semibold ${
                           isPast(day)
                             ? "bg-stone-100 text-stone-500"
-                            : "bg-forest/10 text-forest"
+                            : f.competition === "cup"
+                              ? "bg-purple-100 text-purple-800"
+                              : "bg-forest/10 text-forest"
                         }`}
                       >
-                        {f.home_team ?? "KBC"} v {f.opponent}
+                        {f.home_team ?? "KBC"} v {f.opponent}{f.competition === "cup" ? " (Cup)" : ""}
                       </div>
                     ))}
                     {dayFixtures.length > 2 && (
@@ -529,6 +537,9 @@ function CalendarView({ fixtures }: { fixtures: Fixture[] }) {
               <div>
                 <p className="font-bold text-stone-900 text-sm">
                   {f.home_team ?? "KBC"} <span className="font-normal text-stone-400">vs</span> {f.opponent}
+                  {f.competition === "cup" && (
+                    <span className="ml-2 rounded-full bg-purple-100 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-purple-800">Cup</span>
+                  )}
                 </p>
                 <p className="text-xs text-stone-500 mt-0.5">
                   {fmt(f.date).time}

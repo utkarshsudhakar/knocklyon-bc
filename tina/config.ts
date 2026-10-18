@@ -292,6 +292,15 @@ export default defineConfig({
           },
           {
             type: "string",
+            name: "competition",
+            label: "Competition",
+            options: [
+              { value: "league", label: "League" },
+              { value: "cup", label: "Cup" },
+            ],
+          },
+          {
+            type: "string",
             name: "venue",
             label: "Home or Away",
             options: ["Home", "Away"],
