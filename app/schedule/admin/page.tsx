@@ -512,6 +512,10 @@ async function TeamPanel({
   const cupConfirmedCount = cupFixtures.filter(
     (f) => f.status === "confirmed"
   ).length;
+  const exportReadyCount =
+    confirmedCount +
+    cupFixtures.filter((f) => isExportable(f, clubById.get(f.opponent_club_id)))
+      .length;
 
   return (
     <div className="space-y-6">
@@ -736,16 +740,16 @@ async function TeamPanel({
       </section>
 
       {/* Export — only when there's something to export, collapsed by default */}
-      {confirmedCount > 0 && (
+      {exportReadyCount > 0 && (
         <CollapsibleSection
           title="Export for TinaCMS"
-          count={confirmedCount}
+          count={exportReadyCount}
           countLabel="ready"
           openByDefault={false}
         >
           <ExportPanel
             team={team}
-            fixtures={leagueFixtures}
+            fixtures={[...leagueFixtures, ...cupFixtures]}
             clubById={clubById}
             slotById={slotById}
             seasonFolder={seasonFolder}
@@ -1217,6 +1221,15 @@ function ManualAwayDateForm({ fixtureId }: { fixtureId: string }) {
   );
 }
 
+// Cup home ties only count once the opposing secretary has confirmed the date.
+function isExportable(f: Fixture, club: Club | undefined): boolean {
+  if (f.status !== "confirmed") return false;
+  if (club?.competition === "cup" && f.is_knocklyon_home) {
+    return Boolean(f.secretary_confirmed_at);
+  }
+  return true;
+}
+
 function ExportPanel({
   team,
   fixtures,
@@ -1230,7 +1243,9 @@ function ExportPanel({
   slotById: Map<string, Slot>;
   seasonFolder: string | null;
 }) {
-  const confirmed = fixtures.filter((f) => f.status === "confirmed");
+  const confirmed = fixtures.filter((f) =>
+    isExportable(f, clubById.get(f.opponent_club_id))
+  );
   const outstanding = fixtures.length - confirmed.length;
 
   const knocklyonHome = process.env.KNOCKLYON_LOCATION ?? "Knocklyon Community Centre";
@@ -1239,11 +1254,13 @@ function ExportPanel({
 
   const items = confirmed.map((f) => {
     const opponent = clubById.get(f.opponent_club_id);
-    const opponentLabel = opponent
+    const isCupTie = opponent?.competition === "cup";
+    const baseLabel = opponent
       ? opponent.team_name
         ? `${opponent.name} ${opponent.team_name}`
         : opponent.name
       : "?";
+    const opponentLabel = isCupTie ? `${baseLabel} [CUP match]` : baseLabel;
     const date = f.is_knocklyon_home
       ? f.confirmed_slot_id
         ? slotById.get(f.confirmed_slot_id)?.slot_date ?? null
@@ -1270,7 +1287,7 @@ function ExportPanel({
             ""
           )
         : "fixture";
-    const filename = `${filenameStem}-${f.is_knocklyon_home ? "H" : "A"}.json`;
+    const filename = `${filenameStem}${isCupTie ? "-CUP" : ""}-${f.is_knocklyon_home ? "H" : "A"}.json`;
 
     const json = {
       date: isoDate,
