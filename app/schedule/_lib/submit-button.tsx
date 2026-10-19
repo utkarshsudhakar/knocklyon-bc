@@ -48,7 +48,7 @@ export default function SubmitButton({
   );
 }
 
-function Spinner() {
+export function Spinner() {
   return (
     <svg
       className="animate-spin h-4 w-4"

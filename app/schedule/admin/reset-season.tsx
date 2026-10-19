@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { resetSeason } from "./actions";
+import SubmitButton from "../_lib/submit-button";
 
 export default function ResetSeasonForm() {
   const [confirmText, setConfirmText] = useState("");
@@ -68,9 +69,9 @@ export default function ResetSeasonForm() {
               className="mt-1 w-40 rounded border border-zinc-300 px-3 py-2 text-sm font-mono uppercase"
             />
           </label>
-          <button
-            type="submit"
+          <SubmitButton
             disabled={!armed}
+            pendingLabel="Resetting…"
             className={`rounded px-4 py-2 text-sm font-medium transition-colors ${
               armed
                 ? "bg-red-600 text-white hover:bg-red-700"
@@ -78,7 +79,7 @@ export default function ResetSeasonForm() {
             }`}
           >
             Reset for new season
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </details>

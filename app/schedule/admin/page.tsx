@@ -4,8 +4,13 @@ import TeamTab from "./team-tab";
 import NearDateForm, { type NearMatch } from "./near-date-form";
 import { knocklyonConfirmedMatches } from "../_lib/notify";
 import Overview from "./overview";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import PublishPanel from "./publish-panel";
+import {
+  HOME_DEFAULT_TIME,
+  buildExportItem,
+  isExportable,
+  readCurrentSeasonFolder,
+} from "../_lib/export-core";
 import { getSupabase } from "../_lib/supabase";
 import { isAdmin } from "../_lib/admin-session";
 import {
@@ -38,8 +43,6 @@ import SubmitButton from "../_lib/submit-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Scheduling admin — Knocklyon BC" };
-
-const HOME_DEFAULT_TIME = "20:00";
 
 type KnocklyonTeam = {
   id: string;
@@ -103,25 +106,6 @@ function parseProposed(raw: unknown): ProposedDate[] {
   return out;
 }
 
-async function readCurrentSeasonFolder(): Promise<string | null> {
-  try {
-    const file = path.join(
-      process.cwd(),
-      "content",
-      "settings",
-      "site.json"
-    );
-    const raw = await readFile(file, "utf-8");
-    const settings = JSON.parse(raw) as { current_season?: string };
-    if (settings.current_season) {
-      return settings.current_season.replace("/", "-");
-    }
-  } catch {
-    // ignore — return null and the panel will show a warning
-  }
-  return null;
-}
-
 export default async function AdminPage({
   searchParams,
 }: {
@@ -180,12 +164,12 @@ export default async function AdminPage({
           Scheduling admin
         </h1>
         <form action={logout}>
-          <button
-            type="submit"
+          <SubmitButton
             className="text-sm text-zinc-500 hover:text-zinc-900"
+            pendingLabel="Signing out…"
           >
             Sign out
-          </button>
+          </SubmitButton>
         </form>
       </header>
 
@@ -263,13 +247,13 @@ export default async function AdminPage({
                       )}
                       <form action={deleteKnocklyonTeam}>
                         <input type="hidden" name="id" value={t.id} />
-                        <button
-                          type="submit"
+                        <SubmitButton
                           className="text-sm text-red-600 hover:underline"
-                          title="Delete team (must have no clubs assigned)"
+                          pendingLabel="Deleting…"
+                          confirmMessage={`Delete team ${t.name}? This can't be undone.`}
                         >
                           Delete
-                        </button>
+                        </SubmitButton>
                       </form>
                     </div>
                     {t.invite_sent_at && (
@@ -400,11 +384,14 @@ export default async function AdminPage({
           Add at least one Knocklyon team above to get started.
         </p>
       ) : !selectedTeam ? (
-        <Overview
-          teams={teamsList.map((t) => ({ id: t.id, name: t.name }))}
-          show={params.show === "all" ? "all" : "attention"}
-          query={params.q ?? ""}
-        />
+        <div className="space-y-6">
+          <PublishPanel />
+          <Overview
+            teams={teamsList.map((t) => ({ id: t.id, name: t.name }))}
+            show={params.show === "all" ? "all" : "attention"}
+            query={params.q ?? ""}
+          />
+        </div>
       ) : (
         <TeamPanel key={selectedTeam.id} team={selectedTeam} seasonFolder={seasonFolder} />
       )}
@@ -652,12 +639,12 @@ async function TeamPanel({
                         value={team.id}
                       />
                       <input type="hidden" name="home_slot_id" value={s.id} />
-                      <button
-                        type="submit"
+                      <SubmitButton
                         className="text-sm text-red-600 hover:underline"
+                        pendingLabel="Removing…"
                       >
                         Remove
-                      </button>
+                      </SubmitButton>
                     </form>
                   </div>
                 </li>
@@ -959,12 +946,13 @@ function ClubRow({
             </form>
             <form action={deleteClub}>
               <input type="hidden" name="id" value={club.id} />
-              <button
-                type="submit"
+              <SubmitButton
                 className="text-sm text-red-600 hover:underline"
+                pendingLabel="Deleting…"
+                confirmMessage={`Delete ${club.name}${club.team_name ? ` ${club.team_name}` : ""}? This also deletes its fixtures, including any confirmed dates, and can't be undone.`}
               >
                 Delete
-              </button>
+              </SubmitButton>
             </form>
           </div>
           {club.invite_sent_at && (
@@ -1258,15 +1246,6 @@ function ManualAwayDateForm({
   );
 }
 
-// Cup home ties only count once the opposing secretary has confirmed the date.
-function isExportable(f: Fixture, club: Club | undefined): boolean {
-  if (f.status !== "confirmed") return false;
-  if (club?.competition === "cup" && f.is_knocklyon_home) {
-    return Boolean(f.secretary_confirmed_at);
-  }
-  return true;
-}
-
 function ExportPanel({
   team,
   fixtures,
@@ -1285,61 +1264,22 @@ function ExportPanel({
   );
   const outstanding = fixtures.length - confirmed.length;
 
-  const knocklyonHome = process.env.KNOCKLYON_LOCATION ?? "Knocklyon Community Centre";
-  const knocklyonMap = process.env.KNOCKLYON_MAP_LINK ?? "";
   const teamDisplayName = team.display_name ?? team.name;
 
-  const items = confirmed.map((f) => {
-    const opponent = clubById.get(f.opponent_club_id);
-    const isCupTie = opponent?.competition === "cup";
-    const baseLabel = opponent
-      ? opponent.team_name
-        ? `${opponent.name} ${opponent.team_name}`
-        : opponent.name
-      : "?";
-    const opponentLabel = baseLabel;
-    const date = f.is_knocklyon_home
-      ? f.confirmed_slot_id
-        ? slotById.get(f.confirmed_slot_id)?.slot_date ?? null
-        : null
-      : f.confirmed_date;
-
-    const time =
-      f.match_time ??
-      (f.is_knocklyon_home ? HOME_DEFAULT_TIME : "19:00");
-
-    const isoDate = date ? new Date(`${date}T${time}:00`).toISOString() : "";
-    const venue = f.is_knocklyon_home ? "Home" : "Away";
-    const location = f.is_knocklyon_home
-      ? knocklyonHome
-      : opponent?.venue_location ?? "";
-    const mapLink = f.is_knocklyon_home
-      ? knocklyonMap
-      : opponent?.venue_map_link ?? "";
-
-    const filenameStem =
-      opponent
-        ? `${slugify(opponent.name)}-${slugify(opponent.team_name ?? "")}`.replace(
-            /-+$/,
-            ""
-          )
-        : "fixture";
-    const filename = `${filenameStem}${isCupTie ? "-CUP" : ""}-${f.is_knocklyon_home ? "H" : "A"}.json`;
-
-    const json = {
-      date: isoDate,
-      home_team: teamDisplayName,
-      opponent: opponentLabel,
-      competition: isCupTie ? "cup" : "league",
-      venue,
-      location,
-      map_link: mapLink,
-      result: "",
-      notes: "",
-    };
-
-    return { id: f.id, filename, json, hasLocation: Boolean(location) };
-  });
+  const items = confirmed.map((f) =>
+    buildExportItem({
+      fixtureId: f.id,
+      isHome: f.is_knocklyon_home,
+      matchTime: f.match_time,
+      date: f.is_knocklyon_home
+        ? f.confirmed_slot_id
+          ? slotById.get(f.confirmed_slot_id)?.slot_date ?? null
+          : null
+        : f.confirmed_date,
+      club: clubById.get(f.opponent_club_id),
+      teamDisplayName,
+    })
+  );
 
   return (
     <section className="space-y-4">
@@ -1406,14 +1346,6 @@ function ExportPanel({
       )}
     </section>
   );
-}
-
-function slugify(s: string): string {
-  return s
-    .trim()
-    .replace(/['"]/g, "")
-    .replace(/[^A-Za-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function MessageBanner({

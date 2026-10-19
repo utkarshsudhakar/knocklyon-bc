@@ -1,6 +1,7 @@
 "use client";
 
 import TimeSlotSelect from "../_lib/time-slot-select";
+import SubmitButton from "../_lib/submit-button";
 import { useActionState } from "react";
 import ClubNameEmailFields, { type ClubSuggestion } from "./club-fields";
 import {
@@ -322,9 +323,12 @@ export function TeamSlotTimeEditor({
           </option>
         ))}
       </select>
-      <button type="submit" className="text-xs text-forest hover:underline">
+      <SubmitButton
+        className="text-xs text-forest hover:underline"
+        pendingLabel="Saving…"
+      >
         Save
-      </button>
+      </SubmitButton>
     </form>
   );
 }
