@@ -1,19 +1,4 @@
 import { defineConfig } from "tinacms";
-import * as siteJson from "../content/settings/site.json";
-
-// Statically import all season files — safe for browser bundling.
-// Add a new import here whenever a new season file is created.
-const allSeasonFiles: Record<string, any> = {};
-try { allSeasonFiles["2025-26"] = require("../content/seasons/2025-26.json"); } catch {}
-try { allSeasonFiles["2026-27"] = require("../content/seasons/2026-27.json"); } catch {}
-
-function currentSeasonTeamNames(): string[] {
-  const season: string = (siteJson as any).current_season ?? "";
-  const slug = season.replace("/", "-");
-  return (allSeasonFiles[slug]?.teams ?? [])
-    .map((t: any) => t.name)
-    .filter(Boolean);
-}
 
 // Your hosting provider likely exposes this as an environment variable
 const branch =
@@ -281,7 +266,6 @@ export default defineConfig({
             name: "home_team",
             label: "Our team",
             required: true,
-            options: currentSeasonTeamNames(),
           },
           {
             type: "string",
