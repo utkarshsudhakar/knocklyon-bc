@@ -697,3 +697,37 @@ export function cupConfirmationEmailHtml({ clubName, knocklyonLabel, opponentLab
   `;
   return shell({ preheader: `${roundLabel} confirmed: ${headline}.`, bodyInner: body });
 }
+
+export function matchReminderEmailHtml({ clubName, knocklyonLabel, opponentLabel, round, isHome, date, time, venue, mapLink }: {
+  clubName: string; knocklyonLabel: string; opponentLabel: string; round: string | null; isHome: boolean;
+  date: string; time: string | null; venue: string; mapLink: string;
+}): string {
+  const headline = isHome ? `${knocklyonLabel} vs ${opponentLabel}` : `${opponentLabel} vs ${knocklyonLabel}`;
+  const when = `${formatDateLong(date)}${time ? ` at ${formatTimeFriendly(time)}` : ""}`;
+  const row = (label: string, value: string) => `<tr><td style="padding:10px 12px 10px 0;font-family:${FONT_STACK};font-size:13px;color:${ZINC_500};border-bottom:1px solid ${ZINC_100};white-space:nowrap">${label}</td><td style="padding:10px 0;font-family:${FONT_STACK};font-size:15px;color:${ZINC_700};border-bottom:1px solid ${ZINC_100}"><strong>${value}</strong></td></tr>`;
+  const venueHtml = venue
+    ? `${escapeHtml(venue)}${mapLink ? `<br><a href="${mapLink}" style="font-size:13px;font-weight:400;color:${FOREST};text-decoration:none">Open in Google Maps &rarr;</a>` : ""}`
+    : `<span style="color:${ZINC_500};font-weight:400">To be confirmed</span>`;
+  const lookingForward = isHome
+    ? `We are looking forward to hosting you on <strong>${escapeHtml(when)}</strong>.`
+    : `We are looking forward to playing you on <strong>${escapeHtml(when)}</strong>.`;
+  const roundLabel = round ? `Cup ${round}` : null;
+  const body = `
+    ${kicker(roundLabel ?? "Match reminder")}
+    ${h1("Match reminder")}
+    ${p(`Hi ${escapeHtml(clubName)} secretary,`)}
+    ${p(`This is a reminder of our upcoming match, <strong>${escapeHtml(headline)}</strong>. ${lookingForward}`)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:2px solid ${FOREST}">
+      ${row("Match", escapeHtml(headline))}
+      ${roundLabel ? row("Competition", escapeHtml(roundLabel)) : ""}
+      ${row("Date", escapeHtml(formatDateLong(date)))}
+      ${row("Start time", escapeHtml(time ? formatTimeFriendly(time) : "To be confirmed"))}
+      ${row("Venue", venueHtml)}
+    </table>
+    ${p(isHome
+      ? `If anything has changed or you can&rsquo;t make it, please reply to this email as soon as possible so we can sort it out.`
+      : `If anything has changed, please let us know by replying to this email.`, 24)}
+    <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Kind regards,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
+  `;
+  return shell({ preheader: `Reminder: ${headline}, ${when}.`, bodyInner: body });
+}
