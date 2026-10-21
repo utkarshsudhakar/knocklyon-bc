@@ -708,6 +708,83 @@ export async function acceptProposedDate(formData: FormData) {
   revalidatePath("/schedule/admin");
 }
 
+export async function setHomeDate(formData: FormData) {
+  await requireAdmin();
+  const fixtureId = ((formData.get("fixture_id") as string) ?? "").trim();
+  const date = ((formData.get("date") as string) ?? "").trim();
+  const time = ((formData.get("time") as string) ?? "").trim() || "20:00";
+  if (!fixtureId || !date) return;
+
+  const supabase = getSupabase();
+  const { data: fixture } = await supabase
+    .from("fixtures")
+    .select("id, status, opponent_club_id, clubs(knocklyon_team_id, competition)")
+    .eq("id", fixtureId)
+    .eq("is_knocklyon_home", true)
+    .single<{
+      id: string;
+      status: string;
+      opponent_club_id: string;
+      clubs: { knocklyon_team_id: string | null; competition: string | null } | null;
+    }>();
+  if (!fixture || fixture.status === "confirmed" || fixture.clubs?.competition === "cup") {
+    return;
+  }
+  const teamId = fixture.clubs?.knocklyon_team_id ?? null;
+
+  const bail = (code: string) =>
+    redirect(adminUrl(`msg=${code}&date=${encodeURIComponent(date)}`, teamId));
+
+  if (capacityForDate(date) < 1) bail("cup_date_day");
+
+  const conflict = await findKnocklyonTeamMatchConflict(teamId, date);
+  if (conflict) {
+    redirect(
+      adminUrl(
+        `msg=away_conflict&date=${encodeURIComponent(date)}&team_name=${encodeURIComponent(conflict.name)}${conflict.linked ? "&reason=linked" : ""}`,
+        teamId
+      )
+    );
+  }
+
+  let createdSlot = false;
+  let { data: slot } = await supabase
+    .from("home_slots")
+    .select("id")
+    .eq("slot_date", date)
+    .maybeSingle();
+  if (!slot) {
+    const ins = await supabase
+      .from("home_slots")
+      .insert({ slot_date: date, capacity: capacityForDate(date) })
+      .select("id")
+      .single();
+    slot = ins.data;
+    createdSlot = Boolean(slot);
+  }
+  const { error } = slot
+    ? await supabase.rpc("book_slot", { p_fixture_id: fixture.id, p_slot_id: slot.id })
+    : { error: { message: "slot_failed" } };
+
+  if (error) {
+    if (createdSlot && slot) {
+      await supabase.from("home_slots").delete().eq("id", slot.id);
+    }
+    bail(
+      error.message?.includes("slot_full")
+        ? "cup_date_full"
+        : error.message?.includes("team_conflict")
+          ? "cup_date_clash"
+          : "cup_date_failed"
+    );
+  }
+
+  await supabase.from("fixtures").update({ match_time: time }).eq("id", fixture.id);
+  await maybeSendConfirmationEmail(fixture.opponent_club_id);
+
+  revalidatePath("/schedule/admin");
+}
+
 export async function setCupHomeDate(formData: FormData) {
   await requireAdmin();
   const clubId = ((formData.get("id") as string) ?? "").trim();

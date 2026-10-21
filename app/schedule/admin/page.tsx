@@ -27,6 +27,7 @@ import {
   updateClub,
   removeTeamSlot,
   setAwayDate,
+  setHomeDate,
   resetFixture,
   sendInvite,
   setCupHomeDate,
@@ -1119,9 +1120,22 @@ function FixtureTable({
                       </form>
                     </div>
                   ) : f.is_knocklyon_home ? (
-                    <span className="text-zinc-500">
-                      waiting on {opponent?.name}
-                    </span>
+                    <div>
+                      <span className="text-zinc-500">
+                        waiting on {opponent?.name}
+                      </span>
+                      {opponent?.competition !== "cup" && (
+                        <details className="mt-1">
+                          <summary className="text-xs text-zinc-400 cursor-pointer">
+                            Set date manually
+                          </summary>
+                          <ManualHomeDateForm
+                            fixtureId={f.id}
+                            nearMatches={nearMatches}
+                          />
+                        </details>
+                      )}
+                    </div>
                   ) : proposed.length > 0 ? (
                     <div className="space-y-2">
                       <div className="text-xs text-zinc-500">Proposed:</div>
@@ -1234,6 +1248,42 @@ function ManualAwayDateForm({
       <TimeSlotSelect
         name="time"
         defaultValue="19:00"
+        className="rounded border border-zinc-300 px-2 py-1 text-xs"
+      />
+      <SubmitButton
+        pendingLabel="Setting…"
+        className="text-xs text-forest hover:underline"
+      >
+        Set
+      </SubmitButton>
+    </NearDateForm>
+  );
+}
+
+function ManualHomeDateForm({
+  fixtureId,
+  nearMatches,
+}: {
+  fixtureId: string;
+  nearMatches: NearMatch[];
+}) {
+  return (
+    <NearDateForm
+      action={setHomeDate}
+      matches={nearMatches}
+      excludeFixtureId={fixtureId}
+      className="mt-1 flex flex-wrap items-center gap-2"
+    >
+      <input type="hidden" name="fixture_id" value={fixtureId} />
+      <input
+        type="date"
+        name="date"
+        required
+        className="rounded border border-zinc-300 px-2 py-1 text-xs"
+      />
+      <TimeSlotSelect
+        name="time"
+        defaultValue={HOME_DEFAULT_TIME}
         className="rounded border border-zinc-300 px-2 py-1 text-xs"
       />
       <SubmitButton
