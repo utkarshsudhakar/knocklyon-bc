@@ -2,6 +2,8 @@ import { getSupabase } from "./supabase";
 import { matchReminderEmailHtml } from "./email-templates";
 import { knocklyonLabel, opponentLabel } from "./notify";
 
+const CLUB_CC = "knocklyonbclub@gmail.com";
+
 export type ReminderCandidate = {
   fixtureId: string;
   clubName: string;
@@ -118,7 +120,7 @@ export async function sendReminder(c: ReminderCandidate): Promise<ReminderResult
     const result = await new Resend(apiKey).emails.send({
       from: process.env.CONTACT_FROM ?? "onboarding@resend.dev",
       to: c.to,
-      ...(c.cc ? { cc: c.cc } : {}),
+      cc: [...new Set([c.cc, CLUB_CC].filter((e): e is string => !!e && e.toLowerCase() !== c.to.toLowerCase()))],
       subject: `🔔 Match Reminder: ${headline} - ${shortDate(c.date)}`,
       html: matchReminderEmailHtml({
         clubName: c.clubName,

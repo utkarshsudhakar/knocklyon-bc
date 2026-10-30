@@ -713,7 +713,7 @@ export function matchReminderEmailHtml({ clubName, knocklyonLabel, opponentLabel
     : `We are looking forward to playing you on <strong>${escapeHtml(when)}</strong>.`;
   const roundLabel = round ? `Cup ${round}` : null;
   const body = `
-    ${kicker(roundLabel ?? "Match reminder")}
+    ${kicker(roundLabel ?? "Upcoming match")}
     ${h1("🔔 Match reminder")}
     ${p(`Hi ${escapeHtml(clubName)} secretary,`)}
     ${p(`This is a reminder of our upcoming match, <strong>${escapeHtml(headline)}</strong>. ${lookingForward}`)}
