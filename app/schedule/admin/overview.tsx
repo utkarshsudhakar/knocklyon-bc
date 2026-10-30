@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { getSupabase } from "../_lib/supabase";
 import { MIN_GAP_DAYS, daysBetween } from "../_lib/gap";
+import SubmitButton from "../_lib/submit-button";
+import { sendReminderNow } from "./actions";
+import {
+  dublinToday,
+  dueReminders,
+  loadReminderCandidates,
+  type ReminderCandidate,
+} from "../_lib/reminders";
 
 type Props = {
   teams: { id: string; name: string }[];
@@ -93,8 +101,18 @@ function fixtureCell(
   };
 }
 
-function StatusCell({ cell }: { cell: Cell | null }) {
+function StatusCell({
+  cell,
+  reminder,
+  today,
+}: {
+  cell: Cell | null;
+  reminder?: ReminderCandidate;
+  today: string;
+}) {
   if (!cell) return <span className="text-zinc-400">&ndash;</span>;
+  const upcoming = reminder && reminder.date >= today ? reminder : undefined;
+  const reminded = upcoming && upcoming.sentFor === upcoming.date;
   return (
     <div>
       <span
@@ -105,6 +123,25 @@ function StatusCell({ cell }: { cell: Cell | null }) {
       </span>
       {cell.detail && (
         <div className="ml-3.5 text-xs text-zinc-500">{cell.detail}</div>
+      )}
+      {upcoming && (
+        <div className="ml-3.5 mt-1 flex flex-wrap items-center gap-2">
+          {reminded && (
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-800">
+              Reminder sent
+            </span>
+          )}
+          <form action={sendReminderNow}>
+            <input type="hidden" name="fixture_id" value={upcoming.fixtureId} />
+            <SubmitButton
+              className="text-xs text-forest hover:underline"
+              pendingLabel="Sending…"
+              confirmMessage={`Send a reminder email to ${upcoming.to}${upcoming.cc ? ` (cc ${upcoming.cc})` : ""} now?`}
+            >
+              {reminded ? "Resend reminder" : "Send reminder now"}
+            </SubmitButton>
+          </form>
+        </div>
       )}
     </div>
   );
@@ -124,6 +161,16 @@ export default async function Overview({ teams, show, query }: Props) {
   ]);
   const clubs = (clubData ?? []) as ClubRow[];
   const fixtures = (fixtureData ?? []) as FixtureRow[];
+
+  const today = dublinToday();
+  let reminderCandidates: ReminderCandidate[] = [];
+  try {
+    reminderCandidates = await loadReminderCandidates();
+  } catch (err) {
+    console.error("[Overview] reminders unavailable (has schema-reminders.sql been run?):", err);
+  }
+  const reminderByFixture = new Map(reminderCandidates.map((c) => [c.fixtureId, c]));
+  const dueNow = dueReminders(reminderCandidates, today);
 
   const slotIds = [
     ...new Set(
@@ -230,18 +277,24 @@ export default async function Overview({ teams, show, query }: Props) {
     club: ClubRow;
     home: Cell | null;
     away: Cell | null;
+    homeFixtureId?: string;
+    awayFixtureId?: string;
     pending: number;
     total: number;
   };
   const matchups: Matchup[] = clubs.map((club) => {
     const own = fixtures.filter((f) => f.opponent_club_id === club.id);
-    const home = fixtureCell(own.find((f) => f.is_knocklyon_home), club, dateOf);
-    const away = fixtureCell(own.find((f) => !f.is_knocklyon_home), club, dateOf);
+    const homeFixture = own.find((f) => f.is_knocklyon_home);
+    const awayFixture = own.find((f) => !f.is_knocklyon_home);
+    const home = fixtureCell(homeFixture, club, dateOf);
+    const away = fixtureCell(awayFixture, club, dateOf);
     const cells = [home, away].filter((c): c is Cell => c !== null);
     return {
       club,
       home,
       away,
+      homeFixtureId: homeFixture?.id,
+      awayFixtureId: awayFixture?.id,
       total: cells.length,
       pending: cells.filter((c) => !c.done).length,
     };
@@ -275,6 +328,36 @@ export default async function Overview({ teams, show, query }: Props) {
 
   return (
     <section className="space-y-4">
+      <details className="group rounded-xl border border-sky-200 bg-sky-50">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+          <div>
+            <span className="text-sm font-semibold text-sky-900">
+              Match reminders due ({dueNow.length})
+            </span>
+            <span className="ml-2 text-xs text-sky-800">
+              Sent automatically at 07:00 UTC for matches 1&ndash;2 days away. This is what a run right now would send.
+            </span>
+          </div>
+          <span className="text-xs text-sky-800 group-open:hidden">Expand</span>
+          <span className="hidden text-xs text-sky-800 group-open:inline">Collapse</span>
+        </summary>
+        <div className="px-4 pb-4 text-sm text-zinc-700">
+          {dueNow.length === 0 ? (
+            <p className="italic text-zinc-500">No reminders due.</p>
+          ) : (
+            <ul className="space-y-1">
+              {dueNow.map((c) => (
+                <li key={c.fixtureId}>
+                  <strong>{formatDay(c.date, c.time)}</strong> &middot; {c.isHome ? "Home" : "Away"} vs {c.opponent}
+                  {" "}&rarr; {c.to}
+                  {c.cc ? ` (cc ${c.cc})` : <span className="text-amber-700"> (no captain email to cc)</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </details>
+
       {clashes.length > 0 && (
         <details className="group rounded-xl border border-amber-300 bg-amber-50">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
@@ -460,8 +543,12 @@ export default async function Overview({ teams, show, query }: Props) {
                     <td className="px-4 py-3">
                       {(m.club.knocklyon_team_id && teamName.get(m.club.knocklyon_team_id)) || "?"}
                     </td>
-                    <td className="px-4 py-3"><StatusCell cell={m.home} /></td>
-                    <td className="px-4 py-3"><StatusCell cell={m.away} /></td>
+                    <td className="px-4 py-3">
+                      <StatusCell cell={m.home} today={today} reminder={m.homeFixtureId ? reminderByFixture.get(m.homeFixtureId) : undefined} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusCell cell={m.away} today={today} reminder={m.awayFixtureId ? reminderByFixture.get(m.awayFixtureId) : undefined} />
+                    </td>
                     <td className="px-4 py-3 text-zinc-700">{m.club.secretary_email}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       {m.club.knocklyon_team_id && (

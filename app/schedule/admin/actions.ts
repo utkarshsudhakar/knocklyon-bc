@@ -22,6 +22,7 @@ import {
   formatTimeFriendly,
 } from "../_lib/email-templates";
 import { capacityForDate } from "../_lib/config";
+import { dublinToday, loadReminderCandidates, sendReminder } from "../_lib/reminders";
 
 async function requireAdmin() {
   if (!(await isAdmin())) {
@@ -1186,4 +1187,21 @@ export async function sendCaptainInvite(formData: FormData) {
       ? adminUrl(`msg=captain_invite_sent&team_name=${teamParam}`, team.id)
       : adminUrl(`msg=captain_invite_failed&team_name=${teamParam}`, team.id)
   );
+}
+
+export async function sendReminderNow(formData: FormData) {
+  await requireAdmin();
+  const fixtureId = ((formData.get("fixture_id") as string) ?? "").trim();
+  if (!fixtureId) return;
+
+  const candidate = (await loadReminderCandidates()).find((c) => c.fixtureId === fixtureId);
+  if (!candidate || candidate.date < dublinToday()) {
+    redirect(adminUrl("msg=reminder_failed&reason=not_eligible"));
+  }
+
+  const result = await sendReminder(candidate);
+  if (!result.ok) console.error("[Match reminder] manual send failed:", result.error);
+  revalidatePath("/schedule/admin");
+  const club = encodeURIComponent(candidate.opponent);
+  redirect(adminUrl(result.ok ? `msg=reminder_sent&club=${club}` : `msg=reminder_failed&club=${club}`));
 }

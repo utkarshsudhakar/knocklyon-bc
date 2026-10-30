@@ -8,11 +8,11 @@ import {
   type CalendarEvent,
 } from "./calendar";
 
-function knocklyonLabel(teamName: string | null): string {
+export function knocklyonLabel(teamName: string | null): string {
   return `Knocklyon${teamName ? ` ${teamName}` : ""}`;
 }
 
-function opponentLabel(clubName: string, teamName: string | null): string {
+export function opponentLabel(clubName: string, teamName: string | null): string {
   return teamName ? `${clubName} ${teamName}` : clubName;
 }
 

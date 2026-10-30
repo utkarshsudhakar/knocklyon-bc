@@ -1475,6 +1475,28 @@ function MessageBanner({
       </div>
     );
   }
+  if (code === "reminder_sent") {
+    return (
+      <div
+        role="status"
+        className="rounded border border-forest bg-forest/10 text-forest px-4 py-3 text-sm"
+      >
+        Reminder email sent to {label}.
+      </div>
+    );
+  }
+  if (code === "reminder_failed") {
+    return (
+      <div
+        role="alert"
+        className="rounded border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm"
+      >
+        {reason === "not_eligible"
+          ? "That match no longer has a confirmed upcoming date, so no reminder was sent."
+          : `Sending the reminder to ${label} failed. Check the server logs.`}
+      </div>
+    );
+  }
   if (code === "invite_failed") {
     return (
       <div
