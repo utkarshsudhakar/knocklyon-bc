@@ -709,12 +709,12 @@ export function matchReminderEmailHtml({ clubName, knocklyonLabel, opponentLabel
     ? `${escapeHtml(venue)}${mapLink ? `<br><a href="${mapLink}" style="font-size:13px;font-weight:400;color:${FOREST};text-decoration:none">Open in Google Maps &rarr;</a>` : ""}`
     : `<span style="color:${ZINC_500};font-weight:400">To be confirmed</span>`;
   const lookingForward = isHome
-    ? `We are looking forward to hosting you on <strong>${escapeHtml(when)}</strong>.`
+    ? `The match is on <strong>${escapeHtml(when)}</strong>.`
     : `We are looking forward to playing you on <strong>${escapeHtml(when)}</strong>.`;
   const roundLabel = round ? `Cup ${round}` : null;
   const body = `
     ${kicker(roundLabel ?? "Match reminder")}
-    ${h1("Match reminder")}
+    ${h1("🔔 Match reminder")}
     ${p(`Hi ${escapeHtml(clubName)} secretary,`)}
     ${p(`This is a reminder of our upcoming match, <strong>${escapeHtml(headline)}</strong>. ${lookingForward}`)}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-top:2px solid ${FOREST}">
@@ -725,8 +725,8 @@ export function matchReminderEmailHtml({ clubName, knocklyonLabel, opponentLabel
       ${row("Venue", venueHtml)}
     </table>
     ${p(isHome
-      ? `If anything has changed or you can&rsquo;t make it, please reply to this email as soon as possible so we can sort it out.`
-      : `If anything has changed, please let us know by replying to this email.`, 24)}
+      ? `Please reply to this email using <strong>Reply All</strong> to confirm receipt of this email. We are looking forward to hosting you for the match.`
+      : `Please reply to this email using <strong>Reply All</strong> to confirm receipt of this email, verify the venue and time, and let us know if anything is not correct.`, 24)}
     <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Kind regards,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
   `;
   return shell({ preheader: `Reminder: ${headline}, ${when}.`, bodyInner: body });
