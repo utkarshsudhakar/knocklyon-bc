@@ -335,7 +335,7 @@ export default async function Overview({ teams, show, query }: Props) {
               Match reminders due ({dueNow.length})
             </span>
             <span className="ml-2 text-xs text-sky-800">
-              Sent automatically at 07:00 UTC for matches 1&ndash;2 days away. This is what a run right now would send.
+              Sent automatically at 3pm for matches 1&ndash;2 days away. This is what a run right now would send.
             </span>
           </div>
           <span className="text-xs text-sky-800 group-open:hidden">Expand</span>
