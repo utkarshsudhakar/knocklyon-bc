@@ -3,7 +3,7 @@ title: About Us
 hero_image: /images-(2).jpeg
 second_image: /high-angle-people-badminton-field_23-2149733006.avif
 second_body: ''
-hero_subtitle: 'Over twenty years of competitive badminton in South Dublin. High standards, a tight group, and a real love of the game.'
+hero_subtitle: 'Over forty years of competitive badminton in South Dublin. High standards, a tight group, and a real love of the game.'
 ---
 
 Established in 1978, Knocklyon Badminton Club has been around for over 40 years. It started as a small group of players who wanted a proper competitive club in South Dublin, and it has grown into what we have today: several teams across the DDLC leagues, and busy club nights that keep people playing at a good standard week in, week out.

@@ -3,7 +3,7 @@ title: Knocklyon Badminton Club
 hero_image: /IMG_4075.jpeg
 second_image: /high-angle-people-badminton-field_23-2149733006.avif
 second_body: ''
-hero_subtitle: 'More than twenty years of competitive badminton in South Dublin — built on high standards, genuine camaraderie, and a love of the game.'
+hero_subtitle: 'More than forty years of competitive badminton in South Dublin — built on high standards, genuine camaraderie, and a love of the game.'
 ---
 
 ## Who are we?
