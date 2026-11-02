@@ -725,8 +725,8 @@ export function matchReminderEmailHtml({ clubName, knocklyonLabel, opponentLabel
       ${row("Venue", venueHtml)}
     </table>
     ${p(isHome
-      ? `Please reply to this email using <strong>Reply All</strong> to confirm receipt of this email. We are looking forward to hosting you for the match.`
-      : `Please reply to this email using <strong>Reply All</strong> to confirm receipt of this email, verify the venue and time, and let us know if anything is not correct.`, 24)}
+      ? `Please reply to this email using <strong>Reply All</strong> to confirm receipt of this email. We are looking forward to hosting you for the match. Please feel free to forward this to your team captain to reduce duplicate effort.`
+      : `Please reply to this email using <strong>Reply All</strong> to confirm receipt of this email, verify the venue and time, and let us know if anything is not correct. Please feel free to forward this to your team captain to reduce duplicate effort.`, 24)}
     <p style="margin:28px 0 0 0;font-family:${FONT_STACK};font-size:15px;line-height:1.5;color:${ZINC_700}">Kind regards,<br><strong style="color:${ZINC_900}">Knocklyon Badminton Club</strong></p>
   `;
   return shell({ preheader: `Reminder: ${headline}, ${when}.`, bodyInner: body });
