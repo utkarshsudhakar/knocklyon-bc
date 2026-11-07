@@ -607,6 +607,7 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
   const [view, setView] = useState<"list" | "calendar">("list");
   const [team, setTeam] = useState("all");
   const [upcomingShown, setUpcomingShown] = useState(UPCOMING_PAGE);
+  const [pastShown, setPastShown] = useState(UPCOMING_PAGE);
   const [season, setSeason] = useState<string>(
     currentSeason ?? seasons[0] ?? "",
   );
@@ -636,7 +637,7 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
             {seasons.map((s) => (
               <button
                 key={s}
-                onClick={() => { setSeason(s); setTeam("all"); setUpcomingShown(UPCOMING_PAGE); }}
+                onClick={() => { setSeason(s); setTeam("all"); setUpcomingShown(UPCOMING_PAGE); setPastShown(UPCOMING_PAGE); }}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                   season === s
                     ? "bg-stone-800 text-white"
@@ -686,7 +687,7 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
               {["all", ...teams].map(t => (
                 <button
                   key={t}
-                  onClick={() => { setTeam(t); setUpcomingShown(UPCOMING_PAGE); }}
+                  onClick={() => { setTeam(t); setUpcomingShown(UPCOMING_PAGE); setPastShown(UPCOMING_PAGE); }}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                     team === t
                       ? "bg-forest text-white"
@@ -737,8 +738,17 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
                   <span className="text-sm font-medium text-stone-400">{past.length} matches</span>
                 </div>
                 <div className="mt-4 space-y-3">
-                  {past.slice(0, 10).map(f => <FixtureRow key={f.id} fixture={f} past={true} />)}
+                  {past.slice(0, pastShown).map(f => <FixtureRow key={f.id} fixture={f} past={true} />)}
                 </div>
+                {past.length > pastShown && (
+                  <button
+                    type="button"
+                    onClick={() => setPastShown(n => n + UPCOMING_PAGE)}
+                    className="mt-4 w-full rounded-2xl border border-stone-200 bg-white py-3 text-sm font-semibold text-forest transition hover:border-forest"
+                  >
+                    Show {Math.min(UPCOMING_PAGE, past.length - pastShown)} more ({past.length - pastShown} remaining)
+                  </button>
+                )}
               </>
             )}
           </>
