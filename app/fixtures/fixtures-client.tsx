@@ -18,35 +18,45 @@ type Props = {
 
 // ─── League table viewer ─────────────────────────────────────────────────────
 
-function LeagueTablesSection({ tables }: { tables: TeamEntry[] }) {
-  const [active, setActive] = useState<TeamEntry | null>(null);
-  const [rows, setRows] = useState<string[][] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const normTeam = (n: string) => n.replace(/['’]/g, "").trim().toLowerCase();
 
-  async function open(t: TeamEntry) {
-    if (active?.name === t.name) { setActive(null); setRows(null); return; }
-    setActive(t);
-    setRows(null);
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/league-table?url=${encodeURIComponent(t.table_link!)}`,
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Failed");
-      setRows(json.rows);
-    } catch (e: any) {
-      setError(e.message ?? "Could not load table");
-    } finally {
-      setLoading(false);
-    }
+function LeagueTablesSection({ tables, team }: { tables: TeamEntry[]; team: string }) {
+  const [picked, setPicked] = useState<TeamEntry | null>(null);
+  const [result, setResult] = useState<{ link: string; rows: string[][] | null; error: string | null } | null>(null);
+
+  const followed = team === "all" ? null : tables.find((t) => normTeam(t.name) === normTeam(team)) ?? null;
+  const active = followed ?? picked;
+  const link = active?.table_link ?? null;
+
+  useEffect(() => {
+    if (!link) return;
+    let cancelled = false;
+    fetch(`/api/league-table?url=${encodeURIComponent(link)}`)
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "Failed");
+        if (!cancelled) setResult({ link, rows: json.rows, error: null });
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setResult({ link, rows: null, error: e instanceof Error ? e.message : "Could not load table" });
+      });
+    return () => { cancelled = true; };
+  }, [link]);
+
+  const current = result && result.link === link ? result : null;
+  const loading = !!active && !current;
+  const rows = current?.rows ?? null;
+  const error = current?.error ?? null;
+
+  function open(t: TeamEntry) {
+    setPicked((p) => (p?.name === t.name ? null : t));
   }
 
   // Detect header row (first row with mostly short values like W, L, Pts)
   const header = rows?.[0] ?? [];
   const body = rows?.slice(1) ?? [];
+
+  if (team !== "all" && !followed) return null;
 
   return (
     <section className="border-t border-stone-200 bg-green-50">
@@ -56,13 +66,15 @@ function LeagueTablesSection({ tables }: { tables: TeamEntry[] }) {
             Leinster Badminton
           </p>
           <h2 className="mt-1 text-xl font-extrabold text-stone-900">League Tables</h2>
-          <p className="mt-1 text-sm text-stone-500">
-            Click a team to view their standings.
-          </p>
+          {!followed && (
+            <p className="mt-1 text-sm text-stone-500">
+              Click a team to view their standings.
+            </p>
+          )}
         </div>
 
         {/* Team selector buttons */}
-        <div className="flex flex-wrap gap-2">
+        {!followed && <div className="flex flex-wrap gap-2">
           {tables.map((t) => (
             <button
               key={t.name}
@@ -77,7 +89,7 @@ function LeagueTablesSection({ tables }: { tables: TeamEntry[] }) {
               {t.league ? ` — ${t.league}` : ""}
             </button>
           ))}
-        </div>
+        </div>}
 
         {/* Table viewer */}
         {active && (
@@ -99,11 +111,11 @@ function LeagueTablesSection({ tables }: { tables: TeamEntry[] }) {
                 >
                   Open on Tournament Software ↗
                 </a>
-                <button
-                  onClick={() => { setActive(null); setRows(null); }}
+                {!followed && <button
+                  onClick={() => setPicked(null)}
                   className="grid h-7 w-7 place-items-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
                   aria-label="Close"
-                >✕</button>
+                >✕</button>}
               </div>
             </div>
 
@@ -761,7 +773,7 @@ export default function FixturesClient({ data, query, variables, currentSeason, 
       {(() => {
         const tables = (seasonTeams[season] ?? seasonTeams[seasons[0]] ?? [])
           .filter((t: TeamEntry) => !!t.table_link);
-        return tables.length > 0 ? <LeagueTablesSection tables={tables} /> : null;
+        return tables.length > 0 ? <LeagueTablesSection tables={tables} team={team} /> : null;
       })()}
     </>
   );
