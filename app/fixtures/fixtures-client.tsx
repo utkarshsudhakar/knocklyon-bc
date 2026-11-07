@@ -86,7 +86,6 @@ function LeagueTablesSection({ tables, team }: { tables: TeamEntry[]; team: stri
               }`}
             >
               {t.name}
-              {t.league ? ` — ${t.league}` : ""}
             </button>
           ))}
         </div>}
