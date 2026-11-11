@@ -23,6 +23,8 @@ import {
 } from "../_lib/email-templates";
 import { capacityForDate } from "../_lib/config";
 import { dublinToday, loadReminderCandidates, sendReminder } from "../_lib/reminders";
+import { loadPublishPlan } from "../_lib/export-data";
+import { commitFiles, isGithubPublishConfigured } from "../_lib/github-publish";
 
 async function requireAdmin() {
   if (!(await isAdmin())) {
@@ -1204,4 +1206,71 @@ export async function sendReminderNow(formData: FormData) {
   revalidatePath("/schedule/admin");
   const club = encodeURIComponent(candidate.opponent);
   redirect(adminUrl(result.ok ? `msg=reminder_sent&club=${club}` : `msg=reminder_failed&club=${club}`));
+}
+
+export type PublishResult = { ok: boolean; message: string };
+
+export async function publishFixturesToSite(): Promise<PublishResult> {
+  await requireAdmin();
+  if (!isGithubPublishConfigured()) {
+    return { ok: false, message: "Publishing is not set up yet (GITHUB_TOKEN missing)." };
+  }
+  try {
+    const { folder, items } = await loadPublishPlan();
+    if (!folder) return { ok: false, message: "Could not read the current season." };
+    const toPublish = items.filter((i) => i.status === "new" || i.status === "changed");
+    if (toPublish.length === 0) return { ok: true, message: "Nothing to publish." };
+
+    const n = toPublish.length;
+    const commit = await commitFiles(
+      toPublish.map((i) => ({
+        path: `content/fixtures/${folder}/${i.filename}`,
+        content: JSON.stringify(i.output, null, 2) + "\n",
+      })),
+      `content: publish ${n} fixture${n === 1 ? "" : "s"} from schedule portal`
+    );
+    revalidatePath("/schedule/admin");
+    return {
+      ok: true,
+      message: commit
+        ? `Published ${n} fixture${n === 1 ? "" : "s"}. They will be live in a couple of minutes.`
+        : "Those fixtures are already published.",
+    };
+  } catch (e) {
+    console.error("[Publish fixtures] failed:", e);
+    return { ok: false, message: "Publishing failed. Please try again, or use the zip download." };
+  }
+}
+
+export async function updateFixtureVenue(fixtureId: string): Promise<PublishResult> {
+  await requireAdmin();
+  if (!isGithubPublishConfigured()) {
+    return { ok: false, message: "Publishing is not set up yet (GITHUB_TOKEN missing)." };
+  }
+  try {
+    const { folder, items } = await loadPublishPlan();
+    const item = items.find((i) => i.id === fixtureId);
+    if (!folder || !item?.venueUpdate) {
+      return { ok: false, message: "This fixture no longer needs a location update." };
+    }
+    const commit = await commitFiles(
+      [
+        {
+          path: `content/fixtures/${folder}/${item.filename}`,
+          content: JSON.stringify(item.venueUpdate.output, null, 2) + "\n",
+        },
+      ],
+      `content: update ${item.json.opponent} fixture location`
+    );
+    revalidatePath("/schedule/admin");
+    return {
+      ok: true,
+      message: commit
+        ? "Location updated. It will be live in a couple of minutes."
+        : "Already up to date.",
+    };
+  } catch (e) {
+    console.error("[Update fixture venue] failed:", e);
+    return { ok: false, message: "Update failed. Please try again." };
+  }
 }

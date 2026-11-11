@@ -172,6 +172,14 @@ export type PublishItem = ExportItem & {
   // existing file with only the date replaced so results, notes and any
   // manual edits survive.
   output: Record<string, unknown>;
+  // Set when the file on the site has a different location or map link from
+  // the club record. Opt-in only: hand edits in TinaCMS are never overwritten
+  // automatically.
+  venueUpdate: {
+    from: { location: string; map_link: string };
+    to: { location: string; map_link: string };
+    output: Record<string, unknown>;
+  } | null;
 };
 
 export async function classifyExports(
@@ -187,7 +195,11 @@ export async function classifyExports(
   const out: PublishItem[] = [];
 
   for (const item of items) {
-    const base = { ...item, previousDate: null as string | null };
+    const base = {
+      ...item,
+      previousDate: null as string | null,
+      venueUpdate: null as PublishItem["venueUpdate"],
+    };
 
     if ((counts.get(item.filename) ?? 0) > 1) {
       out.push({ ...base, status: "clash", output: { ...item.json } });
@@ -206,6 +218,18 @@ export async function classifyExports(
     if (!fileExists) {
       out.push({ ...base, status: "new", output: { ...item.json } });
       continue;
+    }
+
+    if (existing && item.json.location) {
+      const str = (v: unknown) => (typeof v === "string" ? v : "");
+      const from = {
+        location: str(existing.location),
+        map_link: str(existing.map_link),
+      };
+      const to = { location: item.json.location, map_link: item.json.map_link };
+      if (from.location !== to.location || from.map_link !== to.map_link) {
+        base.venueUpdate = { from, to, output: { ...existing, ...to } };
+      }
     }
 
     const prev = typeof existing?.date === "string" ? existing.date : null;
